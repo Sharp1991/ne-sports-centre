@@ -7,6 +7,7 @@ export default async function Home() {
   const [
     { data: articles },
     { data: matches },
+    { data: standingsMatches },
   ] = await Promise.all([
     supabase
       .from("articles")
@@ -42,6 +43,30 @@ export default async function Home() {
         )
       `)
       .order("date", { ascending: true }),
+
+    supabase
+      .from("matches")
+      .select(`
+        home_score,
+        away_score,
+        home_team:teams!matches_home_team_id_fkey (
+          id,
+          name,
+          short_name,
+          crest_url
+        ),
+        away_team:teams!matches_away_team_id_fkey (
+          id,
+          name,
+          short_name,
+          crest_url
+        )
+      `)
+      .eq("competition", "Shillong Premier League")
+      .eq("season", "2026")
+      .eq("status", "finished")
+      .not("home_score", "is", null)
+      .not("away_score", "is", null),
   ]);
 
   const featuredArticle = articles?.[0] || null;
@@ -71,6 +96,8 @@ export default async function Home() {
           new Date(a.date).getTime()
       )
       .slice(0, 3) || [];
+
+  const standings = buildStandings(standingsMatches || []);
 
   return (
     <>
@@ -135,32 +162,40 @@ export default async function Home() {
                 </div>
               )}
 
-              <div className="flex flex-col justify-between rounded-3xl border border-sky-100 bg-sky-50 p-6 sm:p-7">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-600">
-                    Latest from the Centre
-                  </p>
-
-                  <h2 className="mt-3 text-3xl font-black leading-tight text-slate-900">
-                    Stories,
-                    <br />
-                    scores & data.
-                  </h2>
-
-                  <p className="mt-4 text-sm leading-6 text-slate-500">
-                    Follow football and other sports across Northeast India,
-                    with the numbers behind the stories.
-                  </p>
-                </div>
-
-                <div className="mt-8">
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+                {latestArticles.slice(0, 3).map((article) => (
                   <a
-                    href="/articles"
-                    className="inline-flex rounded-xl bg-sky-500 px-5 py-3 text-xs font-black uppercase tracking-wider text-white transition hover:bg-sky-600"
+                    key={article.id}
+                    href={`/articles/${article.slug}`}
+                    className="group grid grid-cols-[110px_1fr] gap-4 overflow-hidden rounded-2xl border border-sky-100 bg-white p-3 transition hover:border-sky-300 hover:shadow-sm"
                   >
-                    Explore News →
+                    <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
+                      {article.image_url ? (
+                        <img
+                          src={article.image_url}
+                          alt=""
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-slate-200" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 py-1">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-sky-600">
+                        {article.category || "News"}
+                      </p>
+
+                      <h2 className="mt-1 line-clamp-3 text-sm font-black leading-5 text-slate-900 group-hover:text-sky-700">
+                        {article.title}
+                      </h2>
+
+                      <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Read story →
+                      </p>
+                    </div>
                   </a>
-                </div>
+                ))}
               </div>
             </div>
           </div>
@@ -235,75 +270,115 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* LATEST STORIES */}
-        {latestArticles.length > 0 && (
-          <section className="border-y border-sky-100 bg-white">
-            <div className="mx-auto max-w-7xl px-5 py-10">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-600">
-                    From the Centre
-                  </p>
+        {/* SPL 2026 STANDINGS */}
+        <section className="mx-auto max-w-7xl px-5 py-8">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-sky-600">
+                Shillong Premier League
+              </p>
 
-                  <h2 className="mt-1 text-2xl font-black text-slate-900 sm:text-3xl">
-                    Latest Stories
-                  </h2>
-                </div>
-
-                <a
-                  href="/articles"
-                  className="text-xs font-bold uppercase tracking-wider text-sky-600 hover:text-sky-700"
-                >
-                  All stories →
-                </a>
-              </div>
-
-              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {latestArticles.map((article) => (
-                  <a
-                    key={article.id}
-                    href={`/articles/${article.slug}`}
-                    className="group overflow-hidden rounded-2xl border border-sky-100 bg-white transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md"
-                  >
-                    <div className="aspect-[16/10] overflow-hidden bg-slate-100">
-                      {article.image_url ? (
-                        <img
-                          src={article.image_url}
-                          alt=""
-                          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center bg-sky-50 text-xs font-bold uppercase tracking-widest text-sky-300">
-                          NE Sports Centre
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-5">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-sky-600">
-                        {article.category || "Sports"}
-                      </p>
-
-                      <h3 className="mt-2 line-clamp-3 text-lg font-black leading-snug text-slate-900">
-                        {article.title}
-                      </h3>
-
-                      {article.excerpt && (
-                        <p className="mt-2 line-clamp-2 text-sm leading-5 text-slate-500">
-                          {article.excerpt}
-                        </p>
-                      )}
-
-                      <p className="mt-4 text-xs font-bold text-slate-400">
-                        Read story →
-                      </p>
-                    </div>
-                  </a>
-                ))}
-              </div>
+              <h2 className="mt-1 text-2xl font-black text-slate-900">
+                2026 Standings
+              </h2>
             </div>
-          </section>
-        )}
+
+            <a
+              href="/standings"
+              className="shrink-0 text-sm font-bold text-sky-600"
+            >
+              View full standings →
+            </a>
+          </div>
+
+          <div className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px]">
+                <thead className="bg-sky-50">
+                  <tr className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <th className="px-4 py-3 text-left">#</th>
+                    <th className="px-4 py-3 text-left">Team</th>
+                    <th className="px-3 py-3 text-center">P</th>
+                    <th className="px-3 py-3 text-center">W</th>
+                    <th className="px-3 py-3 text-center">D</th>
+                    <th className="px-3 py-3 text-center">L</th>
+                    <th className="px-3 py-3 text-center">GD</th>
+                    <th className="px-4 py-3 text-center">Pts</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {standings.slice(0, 5).map((team, index) => (
+                    <tr
+                      key={team.id}
+                      className="transition hover:bg-sky-50/50"
+                    >
+                      <td className="px-4 py-4 text-sm font-black text-slate-400">
+                        {index + 1}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          {team.crest_url ? (
+                            <img
+                              src={team.crest_url}
+                              alt=""
+                              className="h-8 w-8 object-contain"
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-slate-100" />
+                          )}
+
+                          <span className="text-sm font-bold text-slate-800">
+                            {team.name}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">
+                        {team.p}
+                      </td>
+
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">
+                        {team.w}
+                      </td>
+
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">
+                        {team.d}
+                      </td>
+
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">
+                        {team.l}
+                      </td>
+
+                      <td
+                        className={`px-3 py-4 text-center text-sm font-bold ${
+                          team.gd > 0
+                            ? "text-emerald-600"
+                            : team.gd < 0
+                              ? "text-red-500"
+                              : "text-slate-500"
+                        }`}
+                      >
+                        {team.gd > 0 ? `+${team.gd}` : team.gd}
+                      </td>
+
+                      <td className="px-4 py-4 text-center text-sm font-black text-slate-900">
+                        {team.pts}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {standings.length === 0 && (
+              <div className="p-8 text-center text-sm text-slate-400">
+                No finished Shillong Premier League matches available.
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* DATA HUB */}
         <section className="mx-auto max-w-7xl px-5 py-10">
@@ -487,4 +562,94 @@ function Empty({ text }: { text: string }) {
       {text}
     </div>
   );
+}
+
+
+function buildStandings(matches: any[]) {
+  const table = new Map<number, any>();
+
+  for (const match of matches) {
+    const home = match.home_team;
+    const away = match.away_team;
+
+    if (!home || !away) continue;
+
+    const homeScore = match.home_score;
+    const awayScore = match.away_score;
+
+    if (homeScore === null || awayScore === null) continue;
+
+    if (!table.has(home.id)) {
+      table.set(home.id, {
+        id: home.id,
+        name: home.name,
+        short_name: home.short_name,
+        crest_url: home.crest_url,
+        p: 0,
+        w: 0,
+        d: 0,
+        l: 0,
+        gf: 0,
+        ga: 0,
+        gd: 0,
+        pts: 0,
+      });
+    }
+
+    if (!table.has(away.id)) {
+      table.set(away.id, {
+        id: away.id,
+        name: away.name,
+        short_name: away.short_name,
+        crest_url: away.crest_url,
+        p: 0,
+        w: 0,
+        d: 0,
+        l: 0,
+        gf: 0,
+        ga: 0,
+        gd: 0,
+        pts: 0,
+      });
+    }
+
+    const homeTeam = table.get(home.id);
+    const awayTeam = table.get(away.id);
+
+    homeTeam.p++;
+    awayTeam.p++;
+
+    homeTeam.gf += homeScore;
+    homeTeam.ga += awayScore;
+
+    awayTeam.gf += awayScore;
+    awayTeam.ga += homeScore;
+
+    if (homeScore > awayScore) {
+      homeTeam.w++;
+      homeTeam.pts += 3;
+      awayTeam.l++;
+    } else if (homeScore < awayScore) {
+      awayTeam.w++;
+      awayTeam.pts += 3;
+      homeTeam.l++;
+    } else {
+      homeTeam.d++;
+      awayTeam.d++;
+      homeTeam.pts++;
+      awayTeam.pts++;
+    }
+  }
+
+  return [...table.values()]
+    .map((team) => ({
+      ...team,
+      gd: team.gf - team.ga,
+    }))
+    .sort(
+      (a, b) =>
+        b.pts - a.pts ||
+        b.gd - a.gd ||
+        b.gf - a.gf
+    );
 }
