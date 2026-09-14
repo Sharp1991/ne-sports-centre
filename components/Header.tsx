@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 const navItems = [
   { label: "Home", href: "/" },
   { label: "News", href: "/articles" },
@@ -14,19 +18,22 @@ const moreItems = [
 ];
 
 export default function Header() {
+  const [open, setOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 border-b border-sky-100 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:py-4">
         <a href="/" className="shrink-0">
-          <div className="text-xl font-black tracking-tight text-sky-600">
+          <div className="text-lg font-black tracking-tight text-sky-600 sm:text-xl">
             NE SPORTS CENTRE
           </div>
 
-          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+          <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 sm:text-[10px]">
             Northeast India
           </div>
         </a>
 
+        {/* Desktop navigation */}
         <nav className="hidden items-center gap-6 md:flex">
           {navItems.map((item) => (
             <a
@@ -59,15 +66,68 @@ export default function Header() {
               ))}
             </div>
           </div>
+
+          <button
+            type="button"
+            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-600"
+          >
+            Search
+          </button>
         </nav>
 
+        {/* Mobile menu button */}
         <button
           type="button"
-          className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-600"
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle navigation"
+          aria-expanded={open}
+          className="rounded-lg border border-sky-100 px-3 py-2 text-xl font-bold text-sky-600 md:hidden"
         >
-          Search
+          {open ? "×" : "☰"}
         </button>
       </div>
+
+      {/* Mobile navigation */}
+      {open && (
+        <div className="border-t border-sky-100 bg-white px-5 py-3 md:hidden">
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-3 text-sm font-bold text-slate-700 hover:bg-sky-50 hover:text-sky-600"
+              >
+                {item.label}
+              </a>
+            ))}
+
+            <div className="border-t border-slate-100 pt-2">
+              <p className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                More
+              </p>
+
+              {moreItems.map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-sky-50 hover:text-sky-600"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="mt-2 w-full rounded-lg bg-sky-500 px-4 py-3 text-sm font-bold text-white"
+            >
+              Search
+            </button>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
