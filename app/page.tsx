@@ -1,8 +1,9 @@
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
+import { getCompetitionMatchesHref } from "@/lib/match-links";
 
 export default async function Home() {
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
 
   const [
     { data: articles },
@@ -14,7 +15,7 @@ export default async function Home() {
       .select(
         "id, title, slug, excerpt, image_url, category, published_at, match_id"
       )
-      .order("published_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(7),
 
     supabase
@@ -27,6 +28,7 @@ export default async function Home() {
         venue,
         home_score,
         away_score,
+        result_type,
         status,
         time,
         home_team:teams!matches_home_team_id_fkey (
@@ -49,6 +51,7 @@ export default async function Home() {
       .select(`
         home_score,
         away_score,
+        result_type,
         home_team:teams!matches_home_team_id_fkey (
           id,
           name,
@@ -72,30 +75,106 @@ export default async function Home() {
   const featuredArticle = articles?.[0] || null;
   const latestArticles = articles?.slice(1, 7) || [];
 
-  const upcoming =
-    matches
-      ?.filter(
-        (match) =>
-          match.date >= today &&
-          match.status !== "completed" &&
-          match.home_score === null &&
-          match.away_score === null
-      )
-      .slice(0, 3) || [];
+  function matchDate(match: any) {
+    const time = match.time ? match.time.slice(0, 5) : "12:00";
+    return new Date(`${match.date}T${time}:00+05:30`);
+  }
 
-  const results =
-    matches
-      ?.filter(
-        (match) =>
-          match.home_score !== null &&
-          match.away_score !== null
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.date).getTime() -
-          new Date(a.date).getTime()
-      )
-      .slice(0, 3) || [];
+  const futureMatches = (matches || [])
+    .filter(
+      (match: any) =>
+        match.status !== "completed" &&
+        match.home_score === null &&
+        match.away_score === null &&
+        matchDate(match).getTime() > now.getTime()
+    )
+    .sort(
+      (a: any, b: any) =>
+        matchDate(a).getTime() - matchDate(b).getTime()
+    );
+
+  const finishedMatches = (matches || [])
+    .filter(
+      (match: any) =>
+        match.home_score !== null &&
+        match.away_score !== null
+    )
+    .sort(
+      (a: any, b: any) =>
+        matchDate(b).getTime() - matchDate(a).getTime()
+    );
+
+  function onePerCompetition(list: any[]) {
+    const seen = new Set<string>();
+
+    return list.filter((match) => {
+      if (seen.has(match.competition)) return false;
+
+      seen.add(match.competition);
+      return true;
+    });
+  }
+
+  const upcoming = onePerCompetition(futureMatches);
+  const results = onePerCompetition(finishedMatches);
+
+  const resultIds = results.map((match: any) => match.id);
+
+  const { data: goalEvents } = resultIds.length
+    ? await supabase
+        .from("match_events")
+        .select(
+          "match_id, minute, team_id, player_id, player_name_raw, type"
+        )
+        .in("match_id", resultIds)
+    : { data: [] };
+
+  const playerIds = [
+    ...new Set(
+      (goalEvents || [])
+        .filter(
+          (event: any) =>
+            event.type?.toLowerCase() === "goal" &&
+            event.player_id !== null
+        )
+        .map((event: any) => event.player_id)
+    ),
+  ];
+
+  const { data: scorerPlayers } = playerIds.length
+    ? await supabase
+        .from("players")
+        .select("id, name")
+        .in("id", playerIds)
+    : { data: [] };
+
+  const playerMap = new Map(
+    (scorerPlayers || []).map((player: any) => [
+      player.id,
+      player.name,
+    ])
+  );
+
+  const scorersByMatch = new Map<number, any[]>();
+
+  (goalEvents || [])
+    .filter(
+      (event: any) =>
+        event.type?.toLowerCase() === "goal"
+    )
+    .forEach((event: any) => {
+      const list = scorersByMatch.get(event.match_id) || [];
+
+      list.push({
+        minute: event.minute,
+        name:
+          playerMap.get(event.player_id) ||
+          event.player_name_raw ||
+          "Unknown Player",
+      });
+
+      scorersByMatch.set(event.match_id, list);
+    });
 
   const standings = buildStandings(standingsMatches || []);
 
@@ -113,7 +192,7 @@ export default async function Home() {
                   href={`/articles/${featuredArticle.slug}`}
                   className="group relative overflow-hidden rounded-3xl bg-slate-900"
                 >
-                  <div className="aspect-[16/9]">
+                  <div className="aspect-[4/3] sm:aspect-[16/9]">
                     {featuredArticle.image_url ? (
                       <img
                         src={featuredArticle.image_url}
@@ -127,17 +206,17 @@ export default async function Home() {
 
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
-                  <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+                  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-8">
                     <span className="inline-flex rounded-full bg-sky-500 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
                       {featuredArticle.category || "Latest Story"}
                     </span>
 
-                    <h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight text-white sm:text-5xl">
+                    <h1 className="mt-3 max-w-3xl text-xl font-black leading-tight text-white sm:text-5xl">
                       {featuredArticle.title}
                     </h1>
 
                     {featuredArticle.excerpt && (
-                      <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
+                      <p className="mt-3 hidden max-w-2xl text-sm leading-6 text-slate-200 sm:block sm:text-base">
                         {featuredArticle.excerpt}
                       </p>
                     )}
@@ -241,7 +320,7 @@ export default async function Home() {
               <div className="space-y-3">
                 {results.length > 0 ? (
                   results.map((match) => (
-                    <MatchCard key={match.id} match={match} />
+                    <MatchCard key={match.id} match={match} scorersByMatch={scorersByMatch} />
                   ))
                 ) : (
                   <Empty text="No results available yet." />
@@ -442,22 +521,65 @@ export default async function Home() {
 function MatchCard({
   match,
   upcoming = false,
+  scorersByMatch,
 }: {
   match: any;
   upcoming?: boolean;
+  scorersByMatch?: Map<number, any[]>;
 }) {
   const home = match.home_team;
   const away = match.away_team;
 
+  const matchTime = match.time ? match.time.slice(0, 5) : null;
+
+  const today = new Date();
+  const todayDate = new Date(
+    today.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    })
+  );
+
+  const matchDateOnly = new Date(
+    `${match.date}T00:00:00+05:30`
+  );
+
+  const daysToGo = Math.round(
+    (matchDateOnly.getTime() - todayDate.getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+
+  let countdown = "";
+
+  if (upcoming) {
+    if (daysToGo <= 0) {
+      countdown = "TODAY";
+    } else if (daysToGo === 1) {
+      countdown = "1 DAY TO GO";
+    } else {
+      countdown = `${daysToGo} DAYS TO GO`;
+    }
+  }
+
+  const scorers = scorersByMatch?.get(match.id) || [];
+
   return (
     <a
-      href={`/matches/${match.id}`}
+      href={getCompetitionMatchesHref(
+        match.competition,
+        match.season
+      )}
       className="block rounded-2xl border border-sky-100 bg-white p-4 transition hover:border-sky-300 hover:shadow-sm"
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="truncate text-[10px] font-black uppercase tracking-wider text-sky-600">
-          {match.competition}
-        </span>
+        <div className="min-w-0">
+          <span className="block truncate text-[10px] font-black uppercase tracking-wider text-sky-600">
+            {match.competition}
+          </span>
+
+          <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+            {match.season}
+          </span>
+        </div>
 
         <span className="shrink-0 text-[10px] font-semibold text-slate-400">
           {new Date(match.date).toLocaleDateString("en-IN", {
@@ -470,18 +592,27 @@ function MatchCard({
       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <Team team={home} align="right" />
 
-        <div className="min-w-[60px] text-center">
+        <div className="min-w-[70px] text-center">
           {upcoming ? (
             <>
               <div className="text-xs font-black uppercase text-slate-400">
                 VS
               </div>
 
-              {match.time && (
-                <div className="mt-1 text-[10px] font-bold text-slate-400">
-                  {match.time.slice(0, 5)}
-                </div>
-              )}
+              <div className="mt-1 text-[10px] font-bold text-slate-400">
+                {matchTime
+                  ? new Date(
+                      `1970-01-01T${matchTime}:00`
+                    ).toLocaleTimeString("en-IN", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                  : "TBC"}
+              </div>
+
+              <div className="mt-1 text-[9px] font-black uppercase tracking-wider text-sky-600">
+                {countdown}
+              </div>
             </>
           ) : (
             <div className="text-xl font-black text-slate-900">
@@ -492,6 +623,19 @@ function MatchCard({
 
         <Team team={away} align="left" />
       </div>
+
+      {!upcoming && (
+        <div className="mt-3 border-t border-slate-100 pt-2 text-center text-[10px] font-semibold text-slate-400">
+          {scorers.length > 0
+            ? scorers
+                .map(
+                  (scorer: any) =>
+                    `${scorer.minute || ""} ${scorer.name}`.trim()
+                )
+                .join(" · ")
+            : "No goals"}
+        </div>
+      )}
     </a>
   );
 }
@@ -625,7 +769,15 @@ function buildStandings(matches: any[]) {
     awayTeam.gf += awayScore;
     awayTeam.ga += homeScore;
 
-    if (homeScore > awayScore) {
+    if (match.result_type === "forfeit_away") {
+      awayTeam.w++;
+      awayTeam.pts += 3;
+      homeTeam.l++;
+    } else if (match.result_type === "forfeit_home") {
+      homeTeam.w++;
+      homeTeam.pts += 3;
+      awayTeam.l++;
+    } else if (homeScore > awayScore) {
       homeTeam.w++;
       homeTeam.pts += 3;
       awayTeam.l++;

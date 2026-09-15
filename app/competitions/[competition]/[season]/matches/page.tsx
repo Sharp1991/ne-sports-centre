@@ -20,6 +20,8 @@ export default async function MatchesPage({
     .from("matches")
     .select(`
       id,
+      competition,
+      season,
       date,
       time,
       home_score,

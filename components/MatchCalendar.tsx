@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { getCompetitionMatchesHref } from "@/lib/match-links";
 
 type Team = {
   id: string;
@@ -12,6 +13,8 @@ type Team = {
 
 type Match = {
   id: string;
+  competition: string;
+  season: string;
   date: string;
   time: string | null;
   home_score: number | null;
@@ -126,7 +129,7 @@ function MatchCard({
 
   return (
     <Link
-      href={`/matches/${match.id}`}
+      href={getCompetitionMatchesHref(match.competition, match.season)}
       className="group block rounded-2xl border border-sky-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md sm:p-5"
     >
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
