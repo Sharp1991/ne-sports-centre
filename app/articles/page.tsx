@@ -14,7 +14,7 @@ export default async function ArticlesPage({
     .select(
       "id, title, slug, excerpt, image_url, category, published_at"
     )
-    .order("published_at", { ascending: false });
+    .order("id", { ascending: false });
 
   const allArticles = articles || [];
 
