@@ -6,14 +6,11 @@ const navItems = [
   { label: "Home", href: "/" },
   { label: "News", href: "/articles" },
   { label: "Matches", href: "/matches" },
-  { label: "Results", href: "/results" },
   { label: "Standings", href: "/standings" },
-  { label: "Teams", href: "/teams" },
 ];
 
 const moreItems = [
   { label: "Competitions", href: "/competitions" },
-  { label: "History", href: "/history" },
   { label: "About", href: "/about" },
 ];
 
