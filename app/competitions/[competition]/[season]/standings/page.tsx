@@ -133,6 +133,32 @@ export default async function StandingsPage({
         .in("match_id", matchIds)
     : { data: [] };
 
+  const playerIds = [
+    ...new Set(
+      (goalEvents || [])
+        .filter(
+          (event: any) =>
+            event.type?.toLowerCase() === "goal" &&
+            event.player_id !== null
+        )
+        .map((event: any) => event.player_id)
+    ),
+  ];
+
+  const { data: scorerPlayers } = playerIds.length
+    ? await supabase
+        .from("players")
+        .select("id, name, team_id, photo_url")
+        .in("id", playerIds)
+    : { data: [] };
+
+  const playerMap = new Map(
+    (scorerPlayers || []).map((player: any) => [
+      player.id,
+      player,
+    ])
+  );
+
   const scorerMap = new Map<
     string,
     {
@@ -156,11 +182,19 @@ export default async function StandingsPage({
       if (existing) {
         existing.goals += 1;
       } else {
+        const player = playerMap.get(event.player_id);
+
         scorerMap.set(key, {
-          name: event.player_name_raw || "Unknown Player",
-          teamId: event.team_id ?? null,
+          name:
+            player?.name ||
+            event.player_name_raw ||
+            "Unknown Player",
+          teamId:
+            event.team_id ??
+            player?.team_id ??
+            null,
           goals: 1,
-          photoUrl: null,
+          photoUrl: player?.photo_url || null,
         });
       }
     });
