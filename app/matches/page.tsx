@@ -38,7 +38,7 @@ export default async function MatchesPage() {
 
   const upcoming =
     matches?.filter(
-      (match) => match.date >= today && match.status !== "completed"
+      (match) => match.date >= today && match.status !== "finished"
     ) || [];
 
   const results =
