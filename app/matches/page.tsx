@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 import MatchesGroups from "@/components/MatchesGroups";
