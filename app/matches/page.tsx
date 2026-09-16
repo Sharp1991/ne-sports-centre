@@ -18,7 +18,6 @@ export default async function MatchesPage() {
       home_score,
       away_score,
       status,
-      result_type,
       time,
       home_team:teams!matches_home_team_id_fkey (
         id,

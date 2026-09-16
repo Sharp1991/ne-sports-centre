@@ -28,7 +28,6 @@ export default async function Home() {
         venue,
         home_score,
         away_score,
-        result_type,
         status,
         time,
         home_team:teams!matches_home_team_id_fkey (
@@ -51,7 +50,6 @@ export default async function Home() {
       .select(`
         home_score,
         away_score,
-        result_type,
         home_team:teams!matches_home_team_id_fkey (
           id,
           name,
@@ -769,15 +767,7 @@ function buildStandings(matches: any[]) {
     awayTeam.gf += awayScore;
     awayTeam.ga += homeScore;
 
-    if (match.result_type === "forfeit_away") {
-      awayTeam.w++;
-      awayTeam.pts += 3;
-      homeTeam.l++;
-    } else if (match.result_type === "forfeit_home") {
-      homeTeam.w++;
-      homeTeam.pts += 3;
-      awayTeam.l++;
-    } else if (homeScore > awayScore) {
+    if (homeScore > awayScore) {
       homeTeam.w++;
       homeTeam.pts += 3;
       awayTeam.l++;
