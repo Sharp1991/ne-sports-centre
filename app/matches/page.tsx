@@ -43,7 +43,7 @@ export default async function MatchesPage() {
 
   const results =
     matches?.filter(
-      (match) => match.date < today || match.status === "completed"
+      (match) => match.date < today || match.status === "finished"
     ) || [];
 
   return (
