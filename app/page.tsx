@@ -461,22 +461,36 @@ export default async function Home() {
         {/* DATA HUB */}
         <section className="mx-auto max-w-7xl px-5 py-10">
           <div className="rounded-3xl bg-slate-900 p-6 sm:p-8">
-            <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-400">
-                The Data Centre
-              </p>
+            <a
+              href="/data-centre"
+              className="group block rounded-2xl border border-slate-700 bg-slate-800/60 p-6 transition hover:border-sky-400 hover:bg-slate-800"
+            >
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-400">
+                    The Data Centre
+                  </p>
 
-              <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
-                Follow the numbers behind the stories.
-              </h2>
+                  <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
+                    Follow the numbers behind the stories.
+                  </h2>
 
-              <p className="mt-3 text-sm leading-6 text-slate-400">
-                Explore teams, matches, standings and competitions from
-                football across Northeast India.
-              </p>
-            </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-400">
+                    Team performance, scoring trends, goal timing, records and
+                    match statistics — all in one place.
+                  </p>
+                </div>
 
-            <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="shrink-0">
+                  <span className="inline-flex items-center rounded-full bg-sky-500 px-5 py-3 text-sm font-black text-white transition group-hover:bg-sky-400">
+                    Explore Data Centre
+                    <span className="ml-2 text-lg">→</span>
+                  </span>
+                </div>
+              </div>
+            </a>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <DataLink href="/teams" title="Teams" text="Clubs and squads" />
               <DataLink href="/matches" title="Matches" text="Fixtures and match centre" />
               <DataLink href="/standings" title="Standings" text="Tables and positions" />
