@@ -2,6 +2,9 @@ import Header from "@/components/Header";
 import StandingsGroups from "@/components/StandingsGroups";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function StandingsPage() {
   const { data: matches } = await supabase
     .from("matches")
