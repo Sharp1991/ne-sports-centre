@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCompetitionMatchesHref } from "@/lib/match-links";
 
 export default function MatchesGroups({
   upcoming,
@@ -141,10 +140,7 @@ function MatchCard({
 }) {
   return (
     <a
-      href={getCompetitionMatchesHref(
-        match.competition,
-        match.season
-      )}
+      href={`/matches/${match.id}`}
       className="block rounded-2xl border border-sky-100 bg-white p-4 transition hover:border-sky-300 hover:shadow-sm"
     >
       <div className="flex items-center justify-between gap-3">
