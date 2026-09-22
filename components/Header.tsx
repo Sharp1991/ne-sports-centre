@@ -5,7 +5,6 @@ import { useState } from "react";
 const navItems = [
   { label: "Home", href: "/" },
   { label: "News", href: "/articles" },
-  { label: "Matches", href: "/matches" },
   { label: "Standings", href: "/standings" },
 ];
 
@@ -42,8 +41,7 @@ export default function Header() {
             </a>
           ))}
 
-          <div className="group relative">
-            <button
+          <button
               type="button"
               className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-sky-600"
             >
@@ -64,12 +62,6 @@ export default function Header() {
             </div>
           </div>
 
-          <button
-            type="button"
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-600"
-          >
-            Search
-          </button>
         </nav>
 
         {/* Mobile menu button */}
@@ -99,29 +91,6 @@ export default function Header() {
               </a>
             ))}
 
-            <div className="border-t border-slate-100 pt-2">
-              <p className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                More
-              </p>
-
-              {moreItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-sky-50 hover:text-sky-600"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              className="mt-2 w-full rounded-lg bg-sky-500 px-4 py-3 text-sm font-bold text-white"
-            >
-              Search
-            </button>
           </nav>
         </div>
       )}
