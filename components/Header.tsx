@@ -6,6 +6,7 @@ const navItems = [
   { label: "Home", href: "/" },
   { label: "News", href: "/articles" },
   { label: "Standings", href: "/standings" },
+  { label: "Competitions", href: "/competitions" },
 ];
 
 export default function Header() {
