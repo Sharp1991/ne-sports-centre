@@ -1,216 +1,42 @@
+import Link from "next/link";
 import Header from "@/components/Header";
-import StandingsGroups from "@/components/StandingsGroups";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type CompetitionSeason = {
+  competition: string;
+  season: string;
+  matchCount: number;
+};
+
 export default async function StandingsPage() {
   const { data: matches } = await supabase
     .from("matches")
-    .select(`
-      id,
-      competition,
-      season,
-      home_team_id,
-      away_team_id,
-      home_score,
-      away_score,
-      status
-    `)
+    .select("competition, season")
     .eq("status", "finished");
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, name, short_name, crest_url");
+  const groups = new Map<string, CompetitionSeason>();
 
-  const allMatches = matches || [];
-  const allTeams = teams || [];
+  for (const match of matches || []) {
+    if (!match.competition || !match.season) continue;
 
-  const competitionMap = new Map<string, any[]>();
-
-  for (const match of allMatches) {
     const key = `${match.competition}|||${match.season}`;
-    const group = competitionMap.get(key) || [];
-    group.push(match);
-    competitionMap.set(key, group);
-  }
+    const existing = groups.get(key);
 
-  const groups = [];
-
-  for (const [key, competitionMatches] of competitionMap) {
-    const [competition, season] = key.split("|||");
-
-    const teamIds = new Set<number>();
-
-    for (const match of competitionMatches) {
-      if (match.home_team_id) teamIds.add(match.home_team_id);
-      if (match.away_team_id) teamIds.add(match.away_team_id);
-    }
-
-    const groupTeams = allTeams.filter((team) =>
-      teamIds.has(team.id)
-    );
-
-    const table = groupTeams.map((team) => ({
-      team,
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      points: 0,
-    }));
-
-    const tableMap = new Map(
-      table.map((row) => [row.team.id, row])
-    );
-
-    for (const match of competitionMatches) {
-      if (
-        match.home_team_id == null ||
-        match.away_team_id == null ||
-        match.home_score == null ||
-        match.away_score == null
-      ) {
-        continue;
-      }
-
-      const home = tableMap.get(match.home_team_id);
-      const away = tableMap.get(match.away_team_id);
-
-      if (!home || !away) continue;
-
-      home.played++;
-      away.played++;
-
-      home.goalsFor += match.home_score;
-      home.goalsAgainst += match.away_score;
-
-      away.goalsFor += match.away_score;
-      away.goalsAgainst += match.home_score;
-
-      if (match.home_score > match.away_score) {
-        home.wins++;
-        home.points += 3;
-        away.losses++;
-      } else if (match.home_score < match.away_score) {
-        away.wins++;
-        away.points += 3;
-        home.losses++;
-      } else {
-        home.draws++;
-        away.draws++;
-        home.points++;
-        away.points++;
-      }
-    }
-
-    table.sort((a, b) => {
-      const gdA = a.goalsFor - a.goalsAgainst;
-      const gdB = b.goalsFor - b.goalsAgainst;
-
-      return (
-        b.points - a.points ||
-        gdB - gdA ||
-        b.goalsFor - a.goalsFor ||
-        a.team.name.localeCompare(b.team.name)
-      );
-    });
-
-    const matchIds = competitionMatches.map(
-      (match) => match.id
-    );
-
-    const { data: goalEvents } = matchIds.length
-      ? await supabase
-          .from("match_events")
-          .select(
-            "match_id, team_id, player_id, player_name_raw, type"
-          )
-          .in("match_id", matchIds)
-      : { data: [] };
-
-    const playerIds = [
-      ...new Set(
-        (goalEvents || [])
-          .filter(
-            (event: any) =>
-              event.type?.toLowerCase() === "goal" &&
-              event.player_id != null
-          )
-          .map((event: any) => event.player_id)
-      ),
-    ];
-
-    const { data: scorerPlayers } = playerIds.length
-      ? await supabase
-          .from("players")
-          .select("id, name, team_id, photo_url")
-          .in("id", playerIds)
-      : { data: [] };
-
-    const playerMap = new Map(
-      (scorerPlayers || []).map((player: any) => [
-        player.id,
-        player,
-      ])
-    );
-
-    const scorerMap = new Map<string, any>();
-
-    for (const event of goalEvents || []) {
-      if (
-        event.type?.toLowerCase() !== "goal" ||
-        event.player_id == null
-      ) {
-        continue;
-      }
-
-      const key = String(event.player_id);
-      const existing = scorerMap.get(key);
-
-      if (existing) {
-        existing.goals++;
-        continue;
-      }
-
-      const player = playerMap.get(event.player_id);
-
-      scorerMap.set(key, {
-        playerId: event.player_id,
-        name:
-          player?.name ||
-          event.player_name_raw ||
-          "Unknown Player",
-        teamId:
-          event.team_id ??
-          player?.team_id ??
-          null,
-        goals: 1,
-        photoUrl: player?.photo_url || null,
+    if (existing) {
+      existing.matchCount++;
+    } else {
+      groups.set(key, {
+        competition: match.competition,
+        season: match.season,
+        matchCount: 1,
       });
     }
-
-    const scorers = [...scorerMap.values()]
-      .sort(
-        (a, b) =>
-          b.goals - a.goals ||
-          a.name.localeCompare(b.name)
-      )
-      .slice(0, 20);
-
-    groups.push({
-      competition,
-      season,
-      table,
-      scorers,
-      teams: groupTeams,
-    });
   }
 
-  groups.sort((a, b) => {
+  const standings = [...groups.values()].sort((a, b) => {
     const competitionCompare =
       a.competition.localeCompare(b.competition);
 
@@ -237,14 +63,53 @@ export default async function StandingsPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-              League tables and top scorers from football
-              competitions across Northeast India.
+              Select a competition and season to view the
+              league table and top scorers.
             </p>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-5 py-8 sm:py-12">
-          <StandingsGroups groups={groups} />
+          {standings.length === 0 ? (
+            <div className="rounded-2xl border border-sky-100 bg-white p-8 text-center text-sm font-bold text-slate-500">
+              No standings available yet.
+            </div>
+          ) : (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {standings.map((item) => (
+                <Link
+                  key={`${item.competition}|||${item.season}`}
+                  href={`/competitions/${encodeURIComponent(
+                    item.competition
+                  )}/${encodeURIComponent(
+                    item.season
+                  )}/standings`}
+                  className="group rounded-3xl border border-sky-100 bg-white p-7 transition hover:-translate-y-1 hover:border-sky-300 hover:shadow-lg"
+                >
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">
+                    {item.competition}
+                  </p>
+
+                  <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-900 group-hover:text-sky-700">
+                    {item.season}
+                  </h2>
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <p className="text-xs font-bold text-slate-400">
+                      {item.matchCount} completed{" "}
+                      {item.matchCount === 1
+                        ? "match"
+                        : "matches"}
+                    </p>
+
+                    <span className="text-sm font-black text-sky-600 transition group-hover:translate-x-1">
+                      View standings →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </>

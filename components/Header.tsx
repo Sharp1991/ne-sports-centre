@@ -8,11 +8,6 @@ const navItems = [
   { label: "Standings", href: "/standings" },
 ];
 
-const moreItems = [
-  { label: "Competitions", href: "/competitions" },
-  { label: "About", href: "/about" },
-];
-
 export default function Header() {
   const [open, setOpen] = useState(false);
 
@@ -40,28 +35,6 @@ export default function Header() {
               {item.label}
             </a>
           ))}
-
-          <button
-              type="button"
-              className="flex items-center gap-1 text-sm font-semibold text-slate-600 transition hover:text-sky-600"
-            >
-              More
-              <span className="text-xs">▾</span>
-            </button>
-
-            <div className="invisible absolute right-0 top-full mt-3 w-44 translate-y-1 rounded-xl border border-sky-100 bg-white p-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-              {moreItems.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-sky-50 hover:text-sky-600"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
-          </div>
-
         </nav>
 
         {/* Mobile menu button */}
@@ -90,7 +63,6 @@ export default function Header() {
                 {item.label}
               </a>
             ))}
-
           </nav>
         </div>
       )}

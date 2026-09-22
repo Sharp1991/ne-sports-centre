@@ -40,12 +40,6 @@ export default async function SeasonPage({
       label: "View matches →",
     },
     {
-      title: "Results",
-      description: "Completed matches and final scores.",
-      href: `/competitions/${encodeURIComponent(competition)}/${encodeURIComponent(season)}/results`,
-      label: "View results →",
-    },
-    {
       title: "Standings",
       description: "League table, points and team records.",
       href: `/competitions/${encodeURIComponent(competition)}/${encodeURIComponent(season)}/standings`,
