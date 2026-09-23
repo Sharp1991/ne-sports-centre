@@ -228,7 +228,7 @@ export default async function Home() {
               ) : (
                 <div className="rounded-3xl bg-slate-900 p-8 text-white">
                   <p className="text-sm font-bold uppercase tracking-widest text-sky-400">
-                    NE Sports Centre
+                    Highland Football
                   </p>
                   <h1 className="mt-4 text-4xl font-black">
                     Sports stories backed by data.
@@ -487,7 +487,7 @@ export default async function Home() {
                       </span>
 
                       <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-400">
-                        NE Sports Centre · Data
+                        Highland Football · Data
                       </p>
                     </div>
 

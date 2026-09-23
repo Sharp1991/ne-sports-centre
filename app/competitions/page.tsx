@@ -46,7 +46,7 @@ export default async function CompetitionsPage() {
         <section className="border-b border-sky-100 bg-white">
           <div className="mx-auto max-w-7xl px-5 py-10 sm:py-14">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-600">
-              NE Sports Centre
+              Highland Football
             </p>
 
             <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">

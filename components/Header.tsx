@@ -20,17 +20,17 @@ export default function Header() {
           <a href="/" className="group flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 shadow-lg shadow-sky-500/20 transition group-hover:bg-sky-400">
               <span className="text-sm font-black tracking-tight text-white">
-                NE
+                HF
               </span>
             </div>
 
             <div>
               <div className="text-[15px] font-black tracking-tight text-white sm:text-base">
-                NE SPORTS CENTRE
+                HIGHLAND FOOTBALL
               </div>
 
               <div className="mt-0.5 text-[8px] font-black uppercase tracking-[0.22em] text-sky-400">
-                Northeast India
+                FOOTBALL · STORIES · DATA
               </div>
             </div>
           </a>

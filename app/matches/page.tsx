@@ -53,7 +53,7 @@ export default async function MatchesPage() {
       <main className="mx-auto max-w-7xl px-5 py-10">
         <div className="border-b border-sky-100 pb-7">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-sky-600">
-            NE Sports Centre
+            Highland Football
           </p>
 
           <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">

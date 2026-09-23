@@ -45,7 +45,7 @@ export default async function ArticlesPage({
         <section className="border-b border-sky-100 bg-white">
           <div className="mx-auto max-w-7xl px-5 py-10 sm:py-14">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-600">
-              NE Sports Centre
+              Highland Football
             </p>
 
             <div className="mt-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -106,7 +106,7 @@ export default async function ArticlesPage({
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center bg-sky-50 text-xs font-black uppercase tracking-widest text-sky-300">
-                      NE Sports Centre
+                      Highland Football
                     </div>
                   )}
                 </div>
