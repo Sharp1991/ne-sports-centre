@@ -458,71 +458,109 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* DATA HUB */}
-        <section className="mx-auto max-w-7xl px-5 py-10">
-          <div className="rounded-3xl bg-slate-900 p-6 sm:p-8">
-            <a
-              href="/data-centre"
-              className="group block rounded-2xl border border-slate-700 bg-slate-800/60 p-6 transition hover:border-sky-400 hover:bg-slate-800"
-            >
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="max-w-2xl">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-400">
-                    The Data Centre
-                  </p>
-
-                  <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl">
-                    Follow the numbers behind the stories.
-                  </h2>
-
-                  <p className="mt-3 text-sm leading-6 text-slate-400">
-                    Team performance, scoring trends, goal timing, records and
-                    match statistics — all in one place.
-                  </p>
-                </div>
-
-                <div className="shrink-0">
-                  <span className="inline-flex items-center rounded-full bg-sky-500 px-5 py-3 text-sm font-black text-white transition group-hover:bg-sky-400">
-                    Explore Data Centre
-                    <span className="ml-2 text-lg">→</span>
-                  </span>
-                </div>
-              </div>
-            </a>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <DataLink href="/teams" title="Teams" text="Clubs and squads" />
-              <DataLink href="/matches" title="Matches" text="Fixtures and match centre" />
-              <DataLink href="/standings" title="Standings" text="Tables and positions" />
-              <DataLink
-                href="/competitions"
-                title="Competitions"
-                text="Tournaments and leagues"
+        {/* DATA CENTRE */}
+        <section className="border-t border-slate-800 bg-slate-950">
+          <div className="mx-auto max-w-7xl px-5 py-14 sm:py-20">
+            <div className="relative overflow-hidden rounded-[2rem] border border-sky-400/20 bg-gradient-to-br from-slate-900 via-slate-950 to-sky-950/40 p-6 shadow-2xl sm:p-10 lg:p-12">
+              {/* subtle data-grid decoration */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(rgba(56,189,248,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.8) 1px, transparent 1px)",
+                  backgroundSize: "32px 32px",
+                }}
               />
-            </div>
-          </div>
-        </section>
 
-        {/* BRAND FOOTER STRIP */}
-        <section className="border-t border-sky-100 bg-sky-50">
-          <div className="mx-auto max-w-7xl px-5 py-10">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-lg font-black text-slate-900">
-                  NE SPORTS CENTRE
-                </p>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl"
+              />
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Northeast India · Stories · Scores · Data
-                </p>
+              <div className="relative">
+                <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="max-w-2xl">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-sm font-black text-white shadow-lg shadow-sky-500/20">
+                        #
+                      </span>
+
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-400">
+                        NE Sports Centre · Data
+                      </p>
+                    </div>
+
+                    <h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">
+                      The numbers behind
+                      <span className="block text-sky-400">
+                        Northeast football.
+                      </span>
+                    </h2>
+
+                    <p className="mt-5 max-w-xl text-sm leading-7 text-slate-400 sm:text-base">
+                      Go beyond the score. Explore player statistics, team
+                      performance, match data, scoring trends and the records
+                      that tell the bigger story of the game.
+                    </p>
+
+                    <a
+                      href="/data-centre"
+                      className="group mt-7 inline-flex items-center gap-3 rounded-xl bg-sky-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400"
+                    >
+                      Explore Data Centre
+                      <span className="text-lg transition-transform group-hover:translate-x-1">
+                        →
+                      </span>
+                    </a>
+                  </div>
+
+                  <div className="grid w-full gap-3 sm:grid-cols-3 lg:w-[48%] lg:min-w-[480px]">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+                      <div className="text-2xl font-black text-sky-400">
+                        01
+                      </div>
+                      <h3 className="mt-4 text-sm font-black text-white">
+                        Players
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Goals, appearances and performance
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+                      <div className="text-2xl font-black text-sky-400">
+                        02
+                      </div>
+                      <h3 className="mt-4 text-sm font-black text-white">
+                        Teams
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Results, form and performance
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+                      <div className="text-2xl font-black text-sky-400">
+                        03
+                      </div>
+                      <h3 className="mt-4 text-sm font-black text-white">
+                        Matches
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Events, stats and records
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-[9px] font-black uppercase tracking-[0.18em] text-slate-600">
+                  <span>Match Data</span>
+                  <span>Player Statistics</span>
+                  <span>Team Performance</span>
+                  <span>Historical Records</span>
+                </div>
               </div>
-
-              <a
-                href="/articles"
-                className="w-fit rounded-xl bg-sky-500 px-5 py-3 text-xs font-black uppercase tracking-wider text-white hover:bg-sky-600"
-              >
-                Explore the Centre →
-              </a>
             </div>
           </div>
         </section>
