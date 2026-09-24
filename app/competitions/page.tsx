@@ -79,17 +79,6 @@ export default async function CompetitionsPage() {
                     {item.competition}
                   </h2>
 
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {[...item.seasons].map((season) => (
-                      <span
-                        key={season}
-                        className="rounded-full bg-sky-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-sky-700"
-                      >
-                        {season}
-                      </span>
-                    ))}
-                  </div>
-
                   <p className="mt-5 text-xs font-bold text-slate-400">
                     {item.matches}{" "}
                     {item.matches === 1 ? "match" : "matches"}
