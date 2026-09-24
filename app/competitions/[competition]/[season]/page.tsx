@@ -1,3 +1,4 @@
+import Header from "@/components/Header";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -54,7 +55,9 @@ export default async function SeasonPage({
   ];
 
   return (
-    <main className="min-h-screen bg-sky-50">
+    <>
+      <Header />
+      <main className="min-h-screen bg-sky-50">
       <section className="border-b border-sky-100 bg-white">
         <div className="mx-auto max-w-7xl px-5 py-10">
           <Link
@@ -143,6 +146,7 @@ export default async function SeasonPage({
           ))}
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
