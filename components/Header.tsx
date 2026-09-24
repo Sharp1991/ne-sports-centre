@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navItems = [
@@ -11,6 +12,7 @@ const navItems = [
 ];
 
 export default function Header() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   return (
@@ -45,9 +47,18 @@ export default function Header() {
                 <a
                   key={item.label}
                   href={item.href}
-                  className="relative rounded-lg px-4 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-white/5 hover:text-white"
+                  className={`relative rounded-lg px-4 py-2.5 text-sm font-bold transition ${
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href))
+                      ? "text-white"
+                      : "text-slate-400 hover:text-white"
+                  }`}
                 >
                   {item.label}
+                  {(pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href))) && (
+                    <span className="absolute inset-x-4 -bottom-[9px] h-0.5 rounded-full bg-sky-400" />
+                  )}
                 </a>
               ))}
             </nav>
