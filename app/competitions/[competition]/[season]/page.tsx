@@ -23,15 +23,7 @@ export default async function SeasonPage({
 
   const allMatches = (matches || []) as any[];
 
-  const teamIds = new Set<number>();
-
-  allMatches.forEach((match) => {
-    if (match.home_team_id) teamIds.add(match.home_team_id);
-    if (match.away_team_id) teamIds.add(match.away_team_id);
-  });
-
   const matchCount = allMatches.length;
-  const teamCount = teamIds.size;
 
   const sections = [
     {
@@ -46,12 +38,7 @@ export default async function SeasonPage({
       href: `/competitions/${encodeURIComponent(competition)}/${encodeURIComponent(season)}/standings`,
       label: "View standings →",
     },
-    {
-      title: "Teams",
-      description: "Teams participating in this competition season.",
-      href: `/competitions/${encodeURIComponent(competition)}/${encodeURIComponent(season)}/teams`,
-      label: "View teams →",
-    },
+
   ];
 
   return (
@@ -80,14 +67,7 @@ export default async function SeasonPage({
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                Matches
-              </p>
-              <p className="mt-1 text-xl font-black text-slate-900">
-                {matchCount}
-              </p>
-            </div>
+          </div>
 
             <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3">
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
