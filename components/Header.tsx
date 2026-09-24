@@ -18,10 +18,12 @@ export default function Header() {
         <div className="flex h-[68px] items-center justify-between">
           {/* Brand */}
           <a href="/" className="group flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 shadow-lg shadow-sky-500/20 transition group-hover:bg-sky-400">
-              <span className="text-sm font-black tracking-tight text-white">
-                HF
-              </span>
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl transition">
+              <img
+                src="/logo.png"
+                alt="Highland Football"
+                className="h-full w-full object-contain"
+              />
             </div>
 
             <div>
