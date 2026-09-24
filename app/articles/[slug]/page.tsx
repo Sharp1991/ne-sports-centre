@@ -1,12 +1,49 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 
-export default async function ArticlePage({
-  params,
-}: {
+type Props = {
   params: Promise<{ slug: string }>;
-}) {
+};
+
+export async function generateMetadata({
+  params,
+}: Props): Promise<Metadata> {
+  const { slug } = await params;
+
+  const { data: article } = await supabase
+    .from("articles")
+    .select("title, excerpt, image_url, category")
+    .eq("slug", slug)
+    .single();
+
+  if (!article) {
+    return {};
+  }
+
+  return {
+    title: article.title,
+    description:
+      article.excerpt ||
+      `Read ${article.title} on Highland Football — football stories, news and data from Meghalaya and Northeast India.`,
+    alternates: {
+      canonical: `/articles/${encodeURIComponent(slug)}`,
+    },
+    ...(article.image_url && {
+      openGraph: {
+        images: [
+          {
+            url: article.image_url,
+            alt: article.title,
+          },
+        ],
+      },
+    }),
+  };
+}
+
+export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
 
   const { data: article } = await supabase
@@ -24,6 +61,34 @@ export default async function ArticlePage({
   return (
     <>
       <Header />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "NewsArticle",
+            headline: article.title,
+            description: article.excerpt || undefined,
+            image: article.image_url ? [article.image_url] : undefined,
+            datePublished: article.published_at || undefined,
+            author: {
+              "@type": "Organization",
+              name: "Highland Football",
+              url: "https://ne-sports-centre.vercel.app/about",
+            },
+            publisher: {
+              "@type": "Organization",
+              name: "Highland Football",
+              url: "https://ne-sports-centre.vercel.app",
+            },
+            mainEntityOfPage: {
+              "@type": "WebPage",
+              "@id": `https://ne-sports-centre.vercel.app/articles/${encodeURIComponent(article.slug)}`,
+            },
+          }),
+        }}
+      />
 
       <main>
         <article>

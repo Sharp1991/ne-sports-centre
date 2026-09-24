@@ -88,9 +88,18 @@ export default function Header() {
                 key={item.label}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="block rounded-xl px-4 py-3 text-sm font-bold text-slate-300 transition hover:bg-sky-500/10 hover:text-sky-400"
+                className={`relative block rounded-xl px-4 py-3 text-sm font-bold transition ${
+                  pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(item.href))
+                    ? "text-white"
+                    : "text-slate-300 hover:bg-sky-500/10 hover:text-sky-400"
+                }`}
               >
                 {item.label}
+                {(pathname === item.href ||
+                  (item.href !== "/" && pathname.startsWith(item.href))) && (
+                  <span className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full bg-sky-400" />
+                )}
               </a>
             ))}
 

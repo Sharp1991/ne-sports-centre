@@ -1,6 +1,31 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ competition: string; season: string }>;
+}): Promise<Metadata> {
+  const {
+    competition: encodedCompetition,
+    season: encodedSeason,
+  } = await params;
+
+  const competition = decodeURIComponent(encodedCompetition);
+  const season = decodeURIComponent(encodedSeason);
+
+  return {
+    title: `${competition} ${season} — Matches & Standings`,
+    description: `Follow the ${competition} ${season} season on Highland Football with matches, results, standings and football data.`,
+    alternates: {
+      canonical: `/competitions/${encodedCompetition}/${encodedSeason}`,
+    },
+  };
+}
 
 export default async function SeasonPage({
   params,
@@ -44,7 +69,32 @@ export default async function SeasonPage({
   return (
     <>
       <Header />
+
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Leagues & Cups", href: "/competitions" },
+          {
+            name: competition,
+            href: `/competitions/${encodeURIComponent(competition)}`,
+          },
+          {
+            name: season,
+            href: `/competitions/${encodeURIComponent(competition)}/${encodeURIComponent(season)}`,
+          },
+        ]}
+      />
+
       <main className="min-h-screen bg-sky-50">
+        <Breadcrumbs
+          items={[
+            { name: "Leagues & Cups", href: "/competitions" },
+            {
+              name: competition,
+              href: `/competitions/${encodeURIComponent(competition)}`,
+            },
+            { name: season },
+          ]}
+        />
       <section className="border-b border-sky-100 bg-white">
         <div className="mx-auto max-w-7xl px-5 py-10">
           <Link

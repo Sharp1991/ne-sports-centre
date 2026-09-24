@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
+import Breadcrumbs from "@/components/seo/Breadcrumbs";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -79,6 +82,65 @@ function formatTime(time: string | null) {
       minute: "2-digit",
     }
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select(`
+      competition,
+      season,
+      home_score,
+      away_score,
+      home_team:teams!matches_home_team_id_fkey (
+        name,
+        short_name
+      ),
+      away_team:teams!matches_away_team_id_fkey (
+        name,
+        short_name
+      )
+    `)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!match) {
+    return {};
+  }
+
+  const homeTeam = Array.isArray(match.home_team)
+    ? match.home_team[0]
+    : match.home_team;
+
+  const awayTeam = Array.isArray(match.away_team)
+    ? match.away_team[0]
+    : match.away_team;
+
+  const homeName = homeTeam?.name || homeTeam?.short_name || "Home";
+  const awayName = awayTeam?.name || awayTeam?.short_name || "Away";
+
+  const title = `${homeName} vs ${awayName} — ${match.competition} ${match.season}`;
+
+  const hasScore =
+    match.home_score !== null && match.away_score !== null;
+
+  const description = hasScore
+    ? `${homeName} ${match.home_score}–${match.away_score} ${awayName} in ${match.competition} ${match.season}. View the match centre, events, lineups and statistics on Highland Football.`
+    : `${homeName} vs ${awayName} in ${match.competition} ${match.season}. View match details, events, lineups and statistics on Highland Football.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/matches/${id}`,
+    },
+  };
 }
 
 export default async function MatchCentrePage({
@@ -222,11 +284,93 @@ export default async function MatchCentrePage({
       : a.id - b.id;
   });
 
+  const homeName = homeTeam?.name || homeTeam?.short_name || "Home";
+  const awayName = awayTeam?.name || awayTeam?.short_name || "Away";
+  const matchName = `${homeName} vs ${awayName}`;
+
+  const matchJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: matchName,
+    startDate: match.date
+      ? `${match.date}${match.time ? `T${match.time}` : ""}`
+      : undefined,
+    location: match.venue
+      ? {
+          "@type": "Place",
+          name: match.venue,
+        }
+      : undefined,
+    homeTeam: {
+      "@type": "SportsTeam",
+      name: homeName,
+    },
+    awayTeam: {
+      "@type": "SportsTeam",
+      name: awayName,
+    },
+    sport: "Football",
+    organizer: {
+      "@type": "Organization",
+      name: "Highland Football",
+      url: "https://ne-sports-centre.vercel.app",
+    },
+    ...(match.home_score !== null &&
+      match.away_score !== null && {
+        eventStatus: "https://schema.org/EventCompleted",
+        homeTeamScore: match.home_score,
+        awayTeamScore: match.away_score,
+      }),
+  };
+
   return (
     <>
       <Header />
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(matchJsonLd),
+        }}
+      />
+
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Leagues & Cups", href: "/competitions" },
+          {
+            name: match.competition,
+            href: `/competitions/${encodeURIComponent(match.competition)}`,
+          },
+          {
+            name: match.season,
+            href: `/competitions/${encodeURIComponent(
+              match.competition
+            )}/${encodeURIComponent(match.season)}`,
+          },
+          {
+            name: matchName,
+            href: `/matches/${match.id}`,
+          },
+        ]}
+      />
+
       <main className="min-h-screen bg-sky-50">
+        <Breadcrumbs
+          items={[
+            { name: "Leagues & Cups", href: "/competitions" },
+            {
+              name: match.competition,
+              href: `/competitions/${encodeURIComponent(match.competition)}`,
+            },
+            {
+              name: match.season,
+              href: `/competitions/${encodeURIComponent(
+                match.competition
+              )}/${encodeURIComponent(match.season)}`,
+            },
+            { name: matchName },
+          ]}
+        />
         <section className="border-b border-sky-100 bg-white">
           <div className="mx-auto max-w-6xl px-5 py-8 sm:py-12">
             <Link
