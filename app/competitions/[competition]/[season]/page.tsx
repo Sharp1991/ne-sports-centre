@@ -66,18 +66,6 @@ export default async function SeasonPage({
             {competition}
           </p>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-          </div>
-
-            <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                Teams
-              </p>
-              <p className="mt-1 text-xl font-black text-slate-900">
-                {teamCount}
-              </p>
-            </div>
-          </div>
         </div>
       </section>
 

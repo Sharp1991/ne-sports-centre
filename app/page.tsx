@@ -65,7 +65,7 @@ export default async function Home() {
         )
       `)
       .eq("competition", "Shillong Premier League")
-      .eq("season", "2026")
+      .eq("season", "2026-27")
       .eq("status", "finished")
       .not("home_score", "is", null)
       .not("away_score", "is", null),
@@ -357,7 +357,7 @@ export default async function Home() {
               </p>
 
               <h2 className="mt-1 text-2xl font-black text-slate-900">
-                2026 Standings
+                2026-27 Standings
               </h2>
             </div>
 
