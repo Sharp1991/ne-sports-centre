@@ -560,11 +560,11 @@ export default async function DataCentrePage() {
           </div>
         </section>
 
-        <div className="mx-auto max-w-7xl px-5 py-8">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-5 sm:py-8">
 
           {/* COMPETITION SNAPSHOT */}
           <section>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 ["Matches played", totalMatches],
                 ["Goals", totalGoals],
@@ -585,9 +585,9 @@ export default async function DataCentrePage() {
               ].map(([label, value]) => (
                 <div
                   key={label}
-                  className="rounded-2xl border border-slate-200 bg-white p-5"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"
                 >
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 sm:text-xs">
                     {label}
                   </p>
                   <p className="mt-2 text-3xl font-black text-slate-950">
@@ -613,7 +613,7 @@ export default async function DataCentrePage() {
               </p>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
               {sortedTeams.map((team) => {
                 const gd = team.goalsFor - team.goalsAgainst;
                 const scoringMatches =
@@ -720,19 +720,19 @@ export default async function DataCentrePage() {
                     {/* CORE NUMBERS */}
                     <div className="grid grid-cols-3 border-b border-slate-100">
                       <div className="p-4 text-center">
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                           Wins
                         </p>
                         <p className="mt-1 text-2xl font-black">
                           {team.wins}
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[9px] text-slate-400 sm:text-[10px]">
                           {winRate}
                         </p>
                       </div>
 
                       <div className="border-x border-slate-100 p-4 text-center">
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                           Draws
                         </p>
                         <p className="mt-1 text-2xl font-black">
@@ -741,7 +741,7 @@ export default async function DataCentrePage() {
                       </div>
 
                       <div className="p-4 text-center">
-                        <p className="text-[10px] font-bold uppercase text-slate-400">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                           Losses
                         </p>
                         <p className="mt-1 text-2xl font-black">
@@ -813,13 +813,13 @@ export default async function DataCentrePage() {
 
                       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Goals scored
                           </p>
                           <p className="mt-1 text-xl font-black">
                             {team.goalsFor}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[9px] text-slate-400 sm:text-[10px]">
                             {team.played
                               ? (
                                   team.goalsFor /
@@ -831,13 +831,13 @@ export default async function DataCentrePage() {
                         </div>
 
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Goals conceded
                           </p>
                           <p className="mt-1 text-xl font-black">
                             {team.goalsAgainst}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[9px] text-slate-400 sm:text-[10px]">
                             {team.played
                               ? (
                                   team.goalsAgainst /
@@ -849,25 +849,25 @@ export default async function DataCentrePage() {
                         </div>
 
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Clean Sheet
                           </p>
                           <p className="mt-1 text-xl font-black">
                             {team.cleanSheets}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[9px] text-slate-400 sm:text-[10px]">
                             {cleanRate}
                           </p>
                         </div>
 
                         <div className="rounded-xl bg-slate-50 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Failed to Score
                           </p>
                           <p className="mt-1 text-xl font-black">
                             {team.failedToScore}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[9px] text-slate-400 sm:text-[10px]">
                             {failedRate}
                           </p>
                         </div>
@@ -876,31 +876,31 @@ export default async function DataCentrePage() {
                       {/* PATTERN GRID */}
                       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div className="rounded-xl border border-slate-100 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Both Teams Scored
                           </p>
                           <p className="mt-1 text-lg font-black">
                             {team.bothScored}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[9px] text-slate-400 sm:text-[10px]">
                             {bothScoredRate}
                           </p>
                         </div>
 
                         <div className="rounded-xl border border-slate-100 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             3+ Goals
                           </p>
                           <p className="mt-1 text-lg font-black">
                             {team.threePlus}
                           </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-[9px] text-slate-400 sm:text-[10px]">
                             {threePlusRate}
                           </p>
                         </div>
 
                         <div className="rounded-xl border border-slate-100 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Scored First
                           </p>
                           <p className="mt-1 text-lg font-black">
@@ -909,7 +909,7 @@ export default async function DataCentrePage() {
                         </div>
 
                         <div className="rounded-xl border border-slate-100 p-3">
-                          <p className="text-[10px] font-bold uppercase text-slate-400">
+                          <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                             Unbeaten
                           </p>
                           <p className="mt-1 text-lg font-black">
@@ -1024,7 +1024,7 @@ export default async function DataCentrePage() {
 
                         <div className="mt-3 grid grid-cols-2 gap-3">
                           <div className="rounded-xl bg-slate-50 p-3">
-                            <p className="text-[10px] font-bold uppercase text-slate-400">
+                            <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                               First half
                             </p>
                             <p className="mt-1 text-xl font-black">
@@ -1033,7 +1033,7 @@ export default async function DataCentrePage() {
                           </div>
 
                           <div className="rounded-xl bg-slate-50 p-3">
-                            <p className="text-[10px] font-bold uppercase text-slate-400">
+                            <p className="text-[9px] font-bold uppercase text-slate-400 sm:text-[10px]">
                               Second half
                             </p>
                             <p className="mt-1 text-xl font-black">
