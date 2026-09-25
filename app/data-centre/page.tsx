@@ -128,7 +128,7 @@ export default async function DataCentrePage() {
       )
     `)
     .eq("competition", "Shillong Premier League")
-    .eq("season", "2026")
+    .eq("season", "2026-27")
     .not("home_score", "is", null)
     .not("away_score", "is", null)
     .order("date", { ascending: true });
