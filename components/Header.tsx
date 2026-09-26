@@ -23,7 +23,7 @@ export default function Header() {
           <a href="/" className="group flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl transition">
               <img
-                src="/logo.png"
+                src="/logo.webp"
                 alt="Highland Football"
                 className="h-full w-full object-contain"
               />
