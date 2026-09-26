@@ -101,7 +101,7 @@ export default async function ArticlesPage({
                   {article.image_url ? (
                     <img
                       src={article.image_url}
-                      alt=""
+                      alt={article.title}
                       className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                     />
                   ) : (

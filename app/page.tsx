@@ -196,7 +196,7 @@ export default async function Home() {
                     {featuredArticle.image_url ? (
                       <img
                         src={featuredArticle.image_url}
-                        alt=""
+                        alt={featuredArticle.title}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -252,7 +252,7 @@ export default async function Home() {
                       {article.image_url ? (
                         <Image
                           src={article.image_url}
-                          alt=""
+                          alt={article.title}
                           fill
                           sizes="110px"
                           className="object-cover transition duration-300 group-hover:scale-105"

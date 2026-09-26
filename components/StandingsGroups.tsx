@@ -190,7 +190,7 @@ function TopScorers({
                   {scorer.photoUrl ? (
                     <img
                       src={scorer.photoUrl}
-                      alt=""
+                      alt={scorer.name}
                       className="h-11 w-11 shrink-0 rounded-full object-cover"
                     />
                   ) : (
