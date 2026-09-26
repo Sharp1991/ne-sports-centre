@@ -153,7 +153,13 @@ function MatchCard({
             {upcoming ? formatTime(match.time) : "Full Time"}
           </p>
 
-          {upcoming && <Countdown match={match} />}
+          {upcoming ? (
+            <Countdown match={match} />
+          ) : (
+            <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-sky-600">
+              View match →
+            </p>
+          )}
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-3">
@@ -217,7 +223,7 @@ export default function MatchCalendar({
         getMatchDate(b).getTime() - getMatchDate(a).getTime()
     );
 
-  const [upcomingOpen, setUpcomingOpen] = useState(true);
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [finishedOpen, setFinishedOpen] = useState(false);
 
   function groupByDate(items: Match[]) {
