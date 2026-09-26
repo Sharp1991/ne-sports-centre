@@ -374,7 +374,16 @@ export default async function Home() {
           </div>
 
           <div className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-white">
-            <div className="overflow-x-auto">
+            <style>{`
+              #standings-toggle { position: absolute; opacity: 0; pointer-events: none; }
+              #standings-toggle:not(:checked) ~ .standings-table tbody tr:nth-child(n+6) { display: none; }
+              #standings-toggle:checked ~ .standings-toggle-label .show-all { display: none; }
+              #standings-toggle:not(:checked) ~ .standings-toggle-label .show-less { display: none; }
+            `}</style>
+
+            <input id="standings-toggle" type="checkbox" />
+
+            <div className="overflow-x-auto standings-table">
               <table className="w-full min-w-[560px]">
                 <thead className="bg-sky-50">
                   <tr className="text-[10px] font-black uppercase tracking-widest text-slate-500">
@@ -390,11 +399,8 @@ export default async function Home() {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {standings.slice(0, 5).map((team, index) => (
-                    <tr
-                      key={team.id}
-                      className="transition hover:bg-sky-50/50"
-                    >
+                  {standings.map((team, index) => (
+                    <tr key={team.id} className="transition hover:bg-sky-50/50">
                       <td className="px-4 py-4 text-sm font-black text-slate-400">
                         {index + 1}
                       </td>
@@ -402,11 +408,7 @@ export default async function Home() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           {team.crest_url ? (
-                            <img
-                              src={team.crest_url}
-                              alt=""
-                              className="h-8 w-8 object-contain"
-                            />
+                            <img src={team.crest_url} alt="" className="h-8 w-8 object-contain" />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-slate-100" />
                           )}
@@ -417,31 +419,18 @@ export default async function Home() {
                         </div>
                       </td>
 
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">
-                        {team.p}
-                      </td>
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.p}</td>
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.w}</td>
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.d}</td>
+                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.l}</td>
 
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">
-                        {team.w}
-                      </td>
-
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">
-                        {team.d}
-                      </td>
-
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">
-                        {team.l}
-                      </td>
-
-                      <td
-                        className={`px-3 py-4 text-center text-sm font-bold ${
-                          team.gd > 0
-                            ? "text-emerald-600"
-                            : team.gd < 0
-                              ? "text-red-500"
-                              : "text-slate-500"
-                        }`}
-                      >
+                      <td className={`px-3 py-4 text-center text-sm font-bold ${
+                        team.gd > 0
+                          ? "text-emerald-600"
+                          : team.gd < 0
+                            ? "text-red-500"
+                            : "text-slate-500"
+                      }`}>
                         {team.gd > 0 ? `+${team.gd}` : team.gd}
                       </td>
 
@@ -453,6 +442,16 @@ export default async function Home() {
                 </tbody>
               </table>
             </div>
+
+            {standings.length > 5 && (
+              <label
+                htmlFor="standings-toggle"
+                className="standings-toggle-label block cursor-pointer border-t border-sky-100 px-4 py-3 text-center text-sm font-bold text-sky-600 hover:bg-sky-50"
+              >
+                <span className="show-all">Show all teams ↓</span>
+                <span className="show-less">Show less ↑</span>
+              </label>
+            )}
 
             {standings.length === 0 && (
               <div className="p-8 text-center text-sm text-slate-400">
