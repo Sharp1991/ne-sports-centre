@@ -464,104 +464,80 @@ export default async function Home() {
         {/* DATA CENTRE */}
         <section className="border-t border-slate-800 bg-slate-950">
           <div className="mx-auto max-w-7xl px-5 py-14 sm:py-20">
-            <div className="relative overflow-hidden rounded-[2rem] border border-sky-400/20 bg-gradient-to-br from-slate-900 via-slate-950 to-sky-950/40 p-6 shadow-2xl sm:p-10 lg:p-12">
-              {/* subtle data-grid decoration */}
+            <div className="relative min-h-[460px] overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-2xl">
+              {/* Technical pitch-line artwork */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 opacity-[0.06]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(rgba(56,189,248,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.8) 1px, transparent 1px)",
-                  backgroundSize: "32px 32px",
-                }}
-              />
+                className="pointer-events-none absolute inset-0 overflow-hidden"
+              >
+                <div className="absolute -right-24 -top-24 h-[520px] w-[520px] rounded-full border border-sky-400/10" />
+                <div className="absolute -right-10 -top-10 h-[360px] w-[360px] rounded-full border border-sky-400/10" />
+                <div className="absolute right-20 top-20 h-28 w-28 rounded-full border border-sky-400/10" />
+                <div className="absolute right-0 top-1/2 h-px w-[62%] bg-sky-400/10" />
+                <div className="absolute right-[31%] top-0 h-full w-px bg-sky-400/10" />
+                <div className="absolute bottom-0 left-0 h-1/2 w-[42%] border-r border-t border-sky-400/10" />
+                <div className="absolute inset-0 opacity-[0.035]"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(rgba(56,189,248,1) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,1) 1px, transparent 1px)",
+                    backgroundSize: "44px 44px",
+                  }}
+                />
+                <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl" />
+                <div className="absolute right-[-10%] top-[15%] h-96 w-96 rounded-full bg-sky-500/[0.07] blur-3xl" />
+              </div>
 
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl"
-              />
-
-              <div className="relative">
-                <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="max-w-2xl">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500 text-sm font-black text-white shadow-lg shadow-sky-500/20">
-                        #
-                      </span>
-
-                      <p className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-400">
-                        Highland Football · Data
-                      </p>
-                    </div>
-
-                    <h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">
-                      The numbers behind
-                      <span className="block text-sky-400">
-                        Northeast football.
-                      </span>
-                    </h2>
-
-                    <p className="mt-5 max-w-xl text-sm leading-7 text-slate-400 sm:text-base">
-                      Go beyond the score. Explore player statistics, team
-                      performance, match data, scoring trends and the records
-                      that tell the bigger story of the game.
+              <div className="relative flex min-h-[460px] flex-col justify-between p-7 sm:p-10 lg:p-14">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.8)]" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-sky-400">
+                      Highland Football · Data
                     </p>
-
-                    <a
-                      href="/data-centre"
-                      className="group mt-7 inline-flex items-center gap-3 rounded-xl bg-sky-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400"
-                    >
-                      Explore Data Centre
-                      <span className="text-lg transition-transform group-hover:translate-x-1">
-                        →
-                      </span>
-                    </a>
                   </div>
 
-                  <div className="grid w-full gap-3 sm:grid-cols-3 lg:w-[48%] lg:min-w-[480px]">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
-                      <div className="text-2xl font-black text-sky-400">
-                        01
-                      </div>
-                      <h3 className="mt-4 text-sm font-black text-white">
-                        Players
-                      </h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Goals, appearances and performance
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
-                      <div className="text-2xl font-black text-sky-400">
-                        02
-                      </div>
-                      <h3 className="mt-4 text-sm font-black text-white">
-                        Teams
-                      </h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Results, form and performance
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
-                      <div className="text-2xl font-black text-sky-400">
-                        03
-                      </div>
-                      <h3 className="mt-4 text-sm font-black text-white">
-                        Matches
-                      </h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Events, stats and records
-                      </p>
-                    </div>
-                  </div>
+                  <span className="hidden text-[9px] font-black uppercase tracking-[0.25em] text-slate-600 sm:block">
+                    Explore the game
+                  </span>
                 </div>
 
-                <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-5 text-[9px] font-black uppercase tracking-[0.18em] text-slate-600">
-                  <span>Match Data</span>
-                  <span>Player Statistics</span>
-                  <span>Team Performance</span>
-                  <span>Historical Records</span>
+                <div className="max-w-4xl py-16 sm:py-20">
+                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">
+                    The Data Centre
+                  </p>
+
+                  <h2 className="mt-4 max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.04em] text-white sm:text-7xl lg:text-8xl">
+                    Beyond
+                    <span className="block text-sky-400">
+                      the score.
+                    </span>
+                  </h2>
+
+                  <p className="mt-7 max-w-xl text-sm leading-7 text-slate-400 sm:text-base">
+                    Results tell you what happened. Our data helps you
+                    explore everything around it.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-6 border-t border-white/10 pt-6 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
+                    <span>Players</span>
+                    <span>Teams</span>
+                    <span>Matches</span>
+                    <span>Competitions</span>
+                  </div>
+
+                  <a
+                    href="/data-centre"
+                    className="group inline-flex w-fit items-center gap-4 text-sm font-black uppercase tracking-[0.12em] text-white transition"
+                  >
+                    <span className="border-b border-sky-400 pb-1">
+                      Explore Data Centre
+                    </span>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-sky-400/40 text-lg text-sky-400 transition group-hover:translate-x-1 group-hover:bg-sky-400 group-hover:text-slate-950">
+                      →
+                    </span>
+                  </a>
                 </div>
               </div>
             </div>
