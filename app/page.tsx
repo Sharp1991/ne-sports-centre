@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 import { getCompetitionMatchesHref } from "@/lib/match-links";
@@ -247,12 +248,15 @@ export default async function Home() {
                     href={`/articles/${article.slug}`}
                     className="group grid grid-cols-[110px_1fr] gap-4 overflow-hidden rounded-2xl border border-sky-100 bg-white p-3 transition hover:border-sky-300 hover:shadow-sm"
                   >
-                    <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
                       {article.image_url ? (
-                        <img
+                        <Image
                           src={article.image_url}
                           alt=""
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          fill
+                          sizes="110px"
+                          className="object-cover transition duration-300 group-hover:scale-105"
+                          priority={latestArticles[0]?.id === article.id}
                         />
                       ) : (
                         <div className="h-full w-full bg-slate-200" />
