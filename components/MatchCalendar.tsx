@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 type Team = {
   id: string;
@@ -66,9 +67,12 @@ function Crest({ team }: { team: Team | null }) {
   }
 
   return (
-    <img
+    <Image
       src={team.crest_url}
       alt=""
+      width={48}
+      height={48}
+      sizes="48px"
       className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12"
     />
   );

@@ -13,6 +13,16 @@ const nextConfig: NextConfig = {
         hostname: "vfuwysgwpswsyufyoayh.supabase.co",
         pathname: "/storage/v1/object/public/Media/**",
       },
+      {
+        protocol: "https",
+        hostname: "vfuwysgwpswsyufyoayh.supabase.co",
+        pathname: "/storage/v1/object/public/club%20logo/**",
+      },
+      {
+        protocol: "https",
+        hostname: "vfuwysgwpswsyufyoayh.supabase.co",
+        pathname: "/storage/v1/object/sign/club%20logo/**",
+      },
     ],
   },
 
