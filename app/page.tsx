@@ -412,7 +412,14 @@ export default async function Home() {
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           {team.crest_url ? (
-                            <img src={team.crest_url} alt="" className="h-8 w-8 object-contain" />
+                            <Image
+                                src={team.crest_url}
+                                alt=""
+                                width={32}
+                                height={32}
+                                sizes="32px"
+                                className="h-8 w-8 object-contain"
+                              />
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-slate-100" />
                           )}
@@ -696,9 +703,12 @@ function Team({
       )}
 
       {team?.crest_url ? (
-        <img
+        <Image
           src={team.crest_url}
           alt=""
+          width={32}
+          height={32}
+          sizes="32px"
           className="h-8 w-8 shrink-0 object-contain"
         />
       ) : (
