@@ -192,13 +192,16 @@ export default async function Home() {
                   href={`/articles/${featuredArticle.slug}`}
                   className="group relative overflow-hidden rounded-3xl bg-slate-900"
                 >
-                  <div className="aspect-[4/3] sm:aspect-[16/9]">
+                  <div className="relative aspect-[4/3] sm:aspect-[16/9]">
                     {featuredArticle.image_url ? (
-                      <img
-                        src={featuredArticle.image_url}
-                        alt={featuredArticle.title}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
+                      <Image
+                          src={featuredArticle.image_url}
+                          alt={featuredArticle.title}
+                          fill
+                          priority
+                          sizes="(min-width: 1024px) 70vw, 100vw"
+                          className="object-cover transition duration-500 group-hover:scale-105"
+                        />
                     ) : (
                       <div className="h-full w-full bg-slate-800" />
                     )}
