@@ -199,6 +199,7 @@ export default async function Home() {
                           alt={featuredArticle.title}
                           fill
                           priority
+                            fetchPriority="high"
                           sizes="(min-width: 1024px) 70vw, 100vw"
                           className="object-cover transition duration-500 group-hover:scale-105"
                         />
