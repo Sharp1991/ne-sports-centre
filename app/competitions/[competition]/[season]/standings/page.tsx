@@ -15,6 +15,8 @@ type Match = {
   away_team_id: number | null;
   home_score: number | null;
   away_score: number | null;
+  status: string | null;
+  group_name: string | null;
 };
 
 export default async function StandingsPage({
@@ -33,13 +35,10 @@ export default async function StandingsPage({
   const { data: matches } = await supabase
     .from("matches")
     .select(
-      "id, home_team_id, away_team_id, home_score, away_score"
+      "id, home_team_id, away_team_id, home_score, away_score, status, group_name"
     )
     .eq("competition", competition)
-    .eq("season", season)
-    .eq("status", "finished")
-    .not("home_score", "is", null)
-    .not("away_score", "is", null);
+    .eq("season", season);
 
   const { data: teams } = await supabase
     .from("teams")
@@ -48,83 +47,128 @@ export default async function StandingsPage({
   const allMatches = (matches || []) as Match[];
   const allTeams = (teams || []) as Team[];
 
-  const teamIds = new Set<number>();
+  const groups = [
+    ...new Set(
+      allMatches
+        .map((match) => match.group_name)
+        .filter(
+          (group): group is string =>
+            Boolean(group && group.trim())
+        )
+    ),
+  ];
 
-  allMatches.forEach((match) => {
-    if (match.home_team_id) teamIds.add(match.home_team_id);
-    if (match.away_team_id) teamIds.add(match.away_team_id);
-  });
+  const isGrouped = groups.length > 0;
 
-  const table = allTeams
-    .filter((team) => teamIds.has(team.id))
-    .map((team) => ({
-      team,
-      played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
-      points: 0,
-    }));
+  function calculateTable(groupMatches: Match[]) {
+    const finishedMatches = groupMatches.filter(
+      (match) =>
+        match.status === "finished" &&
+        match.home_team_id !== null &&
+        match.away_team_id !== null &&
+        match.home_score !== null &&
+        match.away_score !== null
+    );
 
-  const tableMap = new Map(
-    table.map((row) => [row.team.id, row])
+    const teamIds = new Set<number>();
+
+    groupMatches.forEach((match) => {
+      if (match.home_team_id !== null) {
+        teamIds.add(match.home_team_id);
+      }
+
+      if (match.away_team_id !== null) {
+        teamIds.add(match.away_team_id);
+      }
+    });
+
+    const table = allTeams
+      .filter((team) => teamIds.has(team.id))
+      .map((team) => ({
+        team,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        points: 0,
+      }));
+
+    const tableMap = new Map(
+      table.map((row) => [row.team.id, row])
+    );
+
+    finishedMatches.forEach((match) => {
+      const home = tableMap.get(match.home_team_id!);
+      const away = tableMap.get(match.away_team_id!);
+
+      if (!home || !away) return;
+
+      home.played += 1;
+      away.played += 1;
+
+      home.goalsFor += match.home_score!;
+      home.goalsAgainst += match.away_score!;
+
+      away.goalsFor += match.away_score!;
+      away.goalsAgainst += match.home_score!;
+
+      if (match.home_score! > match.away_score!) {
+        home.wins += 1;
+        home.points += 3;
+        away.losses += 1;
+      } else if (match.home_score! < match.away_score!) {
+        away.wins += 1;
+        away.points += 3;
+        home.losses += 1;
+      } else {
+        home.draws += 1;
+        away.draws += 1;
+        home.points += 1;
+        away.points += 1;
+      }
+    });
+
+    table.sort((a, b) => {
+      const gdA = a.goalsFor - a.goalsAgainst;
+      const gdB = b.goalsFor - b.goalsAgainst;
+
+      return (
+        b.points - a.points ||
+        gdB - gdA ||
+        b.goalsFor - a.goalsFor ||
+        a.team.name.localeCompare(b.team.name)
+      );
+    });
+
+    return table;
+  }
+
+  const standingsTables = isGrouped
+    ? groups.map((group) => ({
+        group,
+        table: calculateTable(
+          allMatches.filter(
+            (match) => match.group_name?.trim() === group
+          )
+        ),
+      }))
+    : [
+        {
+          group: null,
+          table: calculateTable(allMatches),
+        },
+      ];
+
+  const finishedMatches = allMatches.filter(
+    (match) =>
+      match.status === "finished" &&
+      match.home_score !== null &&
+      match.away_score !== null
   );
 
-  allMatches.forEach((match) => {
-    if (
-      match.home_team_id === null ||
-      match.away_team_id === null ||
-      match.home_score === null ||
-      match.away_score === null
-    ) {
-      return;
-    }
-
-    const home = tableMap.get(match.home_team_id);
-    const away = tableMap.get(match.away_team_id);
-
-    if (!home || !away) return;
-
-    home.played += 1;
-    away.played += 1;
-
-    home.goalsFor += match.home_score;
-    home.goalsAgainst += match.away_score;
-
-    away.goalsFor += match.away_score;
-    away.goalsAgainst += match.home_score;
-
-    if (match.home_score > match.away_score) {
-      home.wins += 1;
-      home.points += 3;
-      away.losses += 1;
-    } else if (match.home_score < match.away_score) {
-      away.wins += 1;
-      away.points += 3;
-      home.losses += 1;
-    } else {
-      home.draws += 1;
-      away.draws += 1;
-      home.points += 1;
-      away.points += 1;
-    }
-  });
-
-  table.sort((a, b) => {
-    const gdA = a.goalsFor - a.goalsAgainst;
-    const gdB = b.goalsFor - b.goalsAgainst;
-
-    return (
-      b.points - a.points ||
-      gdB - gdA ||
-      b.goalsFor - a.goalsFor ||
-      a.team.name.localeCompare(b.team.name)
-    );
-  });
-
-  const matchIds = allMatches.map((match) => match.id);
+  const matchIds = finishedMatches.map((match) => match.id);
 
   const { data: goalEvents } = matchIds.length
     ? await supabase
@@ -238,106 +282,120 @@ export default async function StandingsPage({
         </section>
 
         <section className="mx-auto max-w-7xl px-5 py-8 sm:py-12">
-          <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse">
-                <thead>
-                  <tr className="bg-sky-50 text-left">
-                    <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500">
-                      Pos
-                    </th>
-                    <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500">
-                      Team
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      P
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      W
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      D
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      L
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      GF
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      GA
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      GD
-                    </th>
-                    <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
-                      Pts
-                    </th>
-                  </tr>
-                </thead>
+          <div className="space-y-8">
+            {standingsTables.map(({ group, table }) => (
+              <div key={group || "overall"}>
+                {group && (
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-black tracking-tight text-slate-900">
+                      {group}
+                    </h2>
+                  </div>
+                )}
 
-                <tbody>
-                  {table.map((row, index) => {
-                    const gd =
-                      row.goalsFor - row.goalsAgainst;
+                <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[720px] border-collapse">
+                      <thead>
+                        <tr className="bg-sky-50 text-left">
+                          <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                            Pos
+                          </th>
+                          <th className="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                            Team
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            P
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            W
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            D
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            L
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            GF
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            GA
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            GD
+                          </th>
+                          <th className="px-4 py-4 text-center text-xs font-black uppercase tracking-wider text-slate-500">
+                            Pts
+                          </th>
+                        </tr>
+                      </thead>
 
-                    return (
-                      <tr
-                        key={row.team.id}
-                        className="border-t border-slate-100"
-                      >
-                        <td className="px-4 py-4 text-sm font-black text-slate-500">
-                          {index + 1}
-                        </td>
+                      <tbody>
+                        {table.map((row, index) => {
+                          const gd =
+                            row.goalsFor - row.goalsAgainst;
 
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
-                            {row.team.crest_url ? (
-                              <img
-                                src={row.team.crest_url}
-                                alt=""
-                                className="h-8 w-8 object-contain"
-                              />
-                            ) : (
-                              <div className="h-8 w-8 rounded-full bg-slate-100" />
-                            )}
+                          return (
+                            <tr
+                              key={row.team.id}
+                              className="border-t border-slate-100"
+                            >
+                              <td className="px-4 py-4 text-sm font-black text-slate-500">
+                                {index + 1}
+                              </td>
 
-                            <span className="font-black text-slate-900">
-                              {row.team.name}
-                            </span>
-                          </div>
-                        </td>
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-3">
+                                  {row.team.crest_url ? (
+                                    <img
+                                      src={row.team.crest_url}
+                                      alt=""
+                                      className="h-8 w-8 object-contain"
+                                    />
+                                  ) : (
+                                    <div className="h-8 w-8 rounded-full bg-slate-100" />
+                                  )}
 
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {row.played}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {row.wins}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {row.draws}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {row.losses}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {row.goalsFor}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {row.goalsAgainst}
-                        </td>
-                        <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
-                          {gd > 0 ? `+${gd}` : gd}
-                        </td>
-                        <td className="px-4 py-4 text-center text-base font-black text-sky-700">
-                          {row.points}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                                  <span className="font-black text-slate-900">
+                                    {row.team.name}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {row.played}
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {row.wins}
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {row.draws}
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {row.losses}
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {row.goalsFor}
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {row.goalsAgainst}
+                              </td>
+                              <td className="px-4 py-4 text-center text-sm font-bold text-slate-700">
+                                {gd > 0 ? `+${gd}` : gd}
+                              </td>
+                              <td className="px-4 py-4 text-center text-base font-black text-sky-700">
+                                {row.points}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
