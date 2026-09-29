@@ -1,6 +1,8 @@
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export default async function CompetitionsPage() {
   const { data: matches } = await supabase
     .from("matches")
