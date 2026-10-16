@@ -130,17 +130,77 @@ export default async function StandingsPage({
       }
     });
 
-    table.sort((a, b) => {
-      const gdA = a.goalsFor - a.goalsAgainst;
-      const gdB = b.goalsFor - b.goalsAgainst;
+    if (competition.trim().toLowerCase() !== "ssa first division") {
+      // Preserve the existing ranking for every other competition.
+      table.sort((a, b) => {
+        const gdA = a.goalsFor - a.goalsAgainst;
+        const gdB = b.goalsFor - b.goalsAgainst;
 
-      return (
-        b.points - a.points ||
-        gdB - gdA ||
-        b.goalsFor - a.goalsFor ||
-        a.team.name.localeCompare(b.team.name)
-      );
-    });
+        return (
+          b.points - a.points ||
+          gdB - gdA ||
+          b.goalsFor - a.goalsFor ||
+          a.team.name.localeCompare(b.team.name)
+        );
+      });
+    } else {
+      // SSA 1st Division: points first, then head-to-head points.
+      table.sort((a, b) => b.points - a.points);
+
+      const rankedTable: typeof table = [];
+
+      for (let start = 0; start < table.length;) {
+        let end = start + 1;
+
+        while (
+          end < table.length &&
+          table[end].points === table[start].points
+        ) {
+          end++;
+        }
+
+        const tiedTeams = table.slice(start, end);
+
+        if (tiedTeams.length > 1) {
+          const tiedIds = new Set(
+            tiedTeams.map((row) => row.team.id)
+          );
+
+          const h2hPoints = new Map<number, number>(
+            tiedTeams.map((row) => [row.team.id, 0])
+          );
+
+          finishedMatches.forEach((match) => {
+            const homeId = match.home_team_id!;
+            const awayId = match.away_team_id!;
+
+            if (!tiedIds.has(homeId) || !tiedIds.has(awayId)) {
+              return;
+            }
+
+            if (match.home_score! > match.away_score!) {
+              h2hPoints.set(homeId, h2hPoints.get(homeId)! + 3);
+            } else if (match.home_score! < match.away_score!) {
+              h2hPoints.set(awayId, h2hPoints.get(awayId)! + 3);
+            } else {
+              h2hPoints.set(homeId, h2hPoints.get(homeId)! + 1);
+              h2hPoints.set(awayId, h2hPoints.get(awayId)! + 1);
+            }
+          });
+
+          tiedTeams.sort(
+            (a, b) =>
+              h2hPoints.get(b.team.id)! - h2hPoints.get(a.team.id)! ||
+              a.team.name.localeCompare(b.team.name)
+          );
+        }
+
+        rankedTable.push(...tiedTeams);
+        start = end;
+      }
+
+      table.splice(0, table.length, ...rankedTable);
+    }
 
     return table;
   }
