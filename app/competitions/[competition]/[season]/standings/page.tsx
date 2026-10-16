@@ -58,7 +58,14 @@ export default async function StandingsPage({
     ),
   ];
 
-  const isGrouped = groups.length > 0;
+  const isSsaFirstDivision =
+    competition.trim().toLowerCase() === "ssa first division";
+
+  const phaseNames = ["bottom league", "semi-final", "final"];
+  const leagueGroups = isSsaFirstDivision
+    ? groups.filter((group) => !phaseNames.includes(group.trim().toLowerCase()))
+    : groups;
+  const isGrouped = leagueGroups.length > 0;
 
   function calculateTable(groupMatches: Match[]) {
     const finishedMatches = groupMatches.filter(
@@ -205,8 +212,8 @@ export default async function StandingsPage({
     return table;
   }
 
-  const standingsTables = isGrouped
-    ? groups.map((group) => ({
+  const regularStandingsTables = isGrouped
+    ? leagueGroups.map((group) => ({
         group,
         table: calculateTable(
           allMatches.filter(
@@ -214,12 +221,38 @@ export default async function StandingsPage({
           )
         ),
       }))
-    : [
-        {
-          group: null,
-          table: calculateTable(allMatches),
-        },
-      ];
+    : [{ group: null, table: calculateTable(allMatches) }];
+
+  const bottomLeagueMatches = isSsaFirstDivision
+    ? allMatches.filter(
+        (match) => match.group_name?.trim().toLowerCase() === "bottom league"
+      )
+    : [];
+
+  const bottomLeagueFinishedMatches = bottomLeagueMatches.filter(
+    (match) =>
+      match.status === "finished" &&
+      match.home_team_id !== null &&
+      match.away_team_id !== null &&
+      match.home_score !== null &&
+      match.away_score !== null
+  );
+
+  const bottomLeagueComplete =
+    bottomLeagueMatches.length > 0 &&
+    bottomLeagueFinishedMatches.length === bottomLeagueMatches.length;
+
+  const standingsTables = isSsaFirstDivision
+    ? [
+        ...regularStandingsTables,
+        ...(bottomLeagueMatches.length > 0
+          ? [{
+              group: "Bottom League",
+              table: calculateTable(bottomLeagueMatches),
+            }]
+          : []),
+      ]
+    : regularStandingsTables;
 
   const finishedMatches = allMatches.filter(
     (match) =>
@@ -353,6 +386,16 @@ export default async function StandingsPage({
                   </div>
                 )}
 
+                {isSsaFirstDivision && group === "Bottom League" && (
+                  <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                    This table counts Bottom League fixtures only. The bottom
+                    two teams are relegated when the league is complete.
+                    {bottomLeagueComplete
+                      ? " Final relegation positions are shown below."
+                      : " Relegation positions remain provisional."}
+                  </p>
+                )}
+
                 <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[720px] border-collapse">
@@ -419,6 +462,13 @@ export default async function StandingsPage({
 
                                   <span className="font-black text-slate-900">
                                     {row.team.name}
+                                    {isSsaFirstDivision &&
+                                      group === "Bottom League" &&
+                                      index >= table.length - 2 && (
+                                        <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-800">
+                                          {bottomLeagueComplete ? "Relegated" : "Relegation zone"}
+                                        </span>
+                                      )}
                                   </span>
                                 </div>
                               </td>
