@@ -17,6 +17,7 @@ type Match = {
   away_score: number | null;
   status: string | null;
   group_name: string | null;
+  matchday?: number | null;
 };
 
 export default async function StandingsPage({
@@ -35,7 +36,7 @@ export default async function StandingsPage({
   const { data: matches } = await supabase
     .from("matches")
     .select(
-      "id, home_team_id, away_team_id, home_score, away_score, status, group_name"
+      "id, home_team_id, away_team_id, home_score, away_score, status, group_name, matchday"
     )
     .eq("competition", competition)
     .eq("season", season);
@@ -241,6 +242,131 @@ export default async function StandingsPage({
   const bottomLeagueComplete =
     bottomLeagueMatches.length > 0 &&
     bottomLeagueFinishedMatches.length === bottomLeagueMatches.length;
+
+
+  // SSA First Division promotion play-offs: derive teams and outcomes from fixtures.
+  const promotionMatches = isSsaFirstDivision
+    ? allMatches.filter((match) =>
+        ["semi-final", "final"].includes(
+          String(match.group_name || "").trim().toLowerCase()
+        )
+      )
+    : [];
+
+  const semiFinals = promotionMatches
+    .filter(
+      (match) =>
+        String(match.group_name || "").trim().toLowerCase() === "semi-final"
+    )
+    .sort((a, b) => Number(a.matchday || 0) - Number(b.matchday || 0));
+
+  const finalMatch = promotionMatches.find(
+    (match) =>
+      String(match.group_name || "").trim().toLowerCase() === "final"
+  );
+
+  const teamsById = new Map(allTeams.map((team) => [team.id, team]));
+  const promotionContenders = new Map<number, Team>();
+
+  for (const match of semiFinals) {
+    for (const id of [match.home_team_id, match.away_team_id]) {
+      if (id !== null) {
+        const team = teamsById.get(id);
+        if (team) promotionContenders.set(id, team);
+      }
+    }
+  }
+
+  const promotedTeamIds = new Set<number>();
+  const eliminatedTeamIds = new Set<number>();
+  let championTeamId: number | null = null;
+
+  for (const match of semiFinals) {
+    const complete =
+      match.status === "finished" &&
+      match.home_team_id !== null &&
+      match.away_team_id !== null &&
+      match.home_score !== null &&
+      match.away_score !== null;
+
+    if (!complete || match.home_score === match.away_score) continue;
+
+    const homeWon = match.home_score! > match.away_score!;
+    const winnerId = homeWon ? match.home_team_id! : match.away_team_id!;
+    const loserId = homeWon ? match.away_team_id! : match.home_team_id!;
+
+    promotedTeamIds.add(winnerId);
+    eliminatedTeamIds.add(loserId);
+  }
+
+  if (finalMatch) {
+    if (finalMatch.home_team_id !== null) {
+      promotedTeamIds.add(finalMatch.home_team_id);
+    }
+    if (finalMatch.away_team_id !== null) {
+      promotedTeamIds.add(finalMatch.away_team_id);
+    }
+
+    if (
+      finalMatch.status === "finished" &&
+      finalMatch.home_team_id !== null &&
+      finalMatch.away_team_id !== null &&
+      finalMatch.home_score !== null &&
+      finalMatch.away_score !== null &&
+      finalMatch.home_score !== finalMatch.away_score
+    ) {
+      championTeamId =
+        finalMatch.home_score > finalMatch.away_score
+          ? finalMatch.home_team_id
+          : finalMatch.away_team_id;
+    }
+  }
+
+  function promotionTeamName(
+    teamId: number | null,
+    fallback: string
+  ): string {
+    return teamId === null
+      ? fallback
+      : teamsById.get(teamId)?.name || fallback;
+  }
+
+  function PromotionTeamCell({
+    teamId,
+    fallback,
+  }: {
+    teamId: number | null;
+    fallback: string;
+  }) {
+    const team = teamId === null ? undefined : teamsById.get(teamId);
+
+    return (
+      <div className="flex items-center gap-3">
+        {team?.crest_url ? (
+          <img
+            src={team.crest_url}
+            alt={`${team.name} crest`}
+            className="h-8 w-8 shrink-0 object-contain"
+            loading="lazy"
+          />
+        ) : (
+          <div className="h-8 w-8 shrink-0 rounded-full bg-slate-100" aria-hidden="true" />
+        )}
+        <span>{team?.name || fallback}</span>
+      </div>
+    );
+  }
+
+  function promotionMatchStatus(match: Match): string {
+    if (
+      match.status === "finished" &&
+      match.home_score !== null &&
+      match.away_score !== null
+    ) {
+      return "Full time";
+    }
+    return match.status || "Scheduled";
+  }
 
   const standingsTables = isSsaFirstDivision
     ? [
@@ -508,6 +634,85 @@ export default async function StandingsPage({
             ))}
           </div>
         </section>
+
+
+        {isSsaFirstDivision && semiFinals.length > 0 && (
+          <section className="mx-auto max-w-7xl px-5 pb-12">
+            <div className="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm sm:p-8">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-600">
+                SSA First Division
+              </p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
+                Promotion Race &amp; Champions
+              </h2>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+                Both semi-final winners earn promotion. Both finalists are promoted;
+                the final winner is crowned SSA First Division champion.
+              </p>
+
+              <div className="mt-6 overflow-x-auto rounded-2xl border border-sky-100">
+                <table className="w-full min-w-[620px] border-collapse">
+                  <thead>
+                    <tr className="bg-sky-50 text-left">
+                      {["Stage", "Home team", "Score", "Away team", "Status"].map((heading) => (
+                        <th key={heading} className="px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-500">
+                          {heading}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {semiFinals.map((match, index) => (
+                      <tr key={match.id} className="border-t border-slate-100">
+                        <td className="px-4 py-4 text-sm font-black text-slate-700">
+                          Semi-final {index + 1}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-bold text-slate-900">
+                          <PromotionTeamCell teamId={match.home_team_id} fallback="TBD" />
+                        </td>
+                        <td className="px-4 py-4 text-sm font-black text-sky-700">
+                          {match.home_score !== null && match.away_score !== null
+                            ? `${match.home_score} – ${match.away_score}`
+                            : "vs"}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-bold text-slate-900">
+                          <PromotionTeamCell teamId={match.away_team_id} fallback="TBD" />
+                        </td>
+                        <td className="px-4 py-4 text-xs font-bold text-slate-500">
+                          {promotionMatchStatus(match)}
+                        </td>
+                      </tr>
+                    ))}
+                    {finalMatch && (
+                      <tr key={finalMatch.id} className="border-t-2 border-sky-100 bg-amber-50/50">
+                        <td className="px-4 py-4 text-sm font-black text-amber-800">
+                          Final
+                        </td>
+                        <td className="px-4 py-4 text-sm font-bold text-slate-900">
+                          <PromotionTeamCell teamId={finalMatch.home_team_id} fallback="Winner of Semi-final 1" />
+                        </td>
+                        <td className="px-4 py-4 text-sm font-black text-sky-700">
+                          {finalMatch.home_score !== null && finalMatch.away_score !== null
+                            ? `${finalMatch.home_score} – ${finalMatch.away_score}`
+                            : "vs"}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-bold text-slate-900">
+                          <PromotionTeamCell teamId={finalMatch.away_team_id} fallback="Winner of Semi-final 2" />
+                        </td>
+                        <td className="px-4 py-4 text-xs font-bold text-slate-500">
+                          {championTeamId !== null
+                            ? "Champion decided"
+                            : promotionMatchStatus(finalMatch)}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </section>
+        )}
 
         <section className="mx-auto max-w-7xl px-5 pb-12">
           <div className="mb-5">
