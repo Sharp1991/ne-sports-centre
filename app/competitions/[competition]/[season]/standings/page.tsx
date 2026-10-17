@@ -48,6 +48,242 @@ export default async function StandingsPage({
   const allMatches = (matches || []) as Match[];
   const allTeams = (teams || []) as Team[];
 
+  // SSA Super Cup 2026 is a knockout tournament, not a league.
+  // This isolated branch leaves every other competition unchanged.
+  const isSsaSuperCup2026 =
+    competition.trim().toLowerCase() === "ssa super cup" &&
+    season.trim() === "2026";
+
+  if (isSsaSuperCup2026) {
+    const cupMatches = [...allMatches].sort((a, b) => a.id - b.id);
+    const teamById = new Map(allTeams.map((team) => [team.id, team]));
+
+    const stageText = (match: Match) =>
+      `${match.group_name || ""} ${String(match.matchday ?? "")}`
+        .toLowerCase()
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const findStage = (
+      stage: "po1" | "po2" | "sf1" | "sf2" | "final",
+      fallbackIndex: number
+    ): Match | null => {
+      const found = cupMatches.find((match) => {
+        const label = stageText(match);
+
+        if (stage === "po1") return /\b(po\s*1|play off 1|playoff 1)\b/.test(label);
+        if (stage === "po2") return /\b(po\s*2|play off 2|playoff 2)\b/.test(label);
+        if (stage === "sf1") return /\b(sf\s*1|semi final 1|semifinal 1)\b/.test(label);
+        if (stage === "sf2") return /\b(sf\s*2|semi final 2|semifinal 2)\b/.test(label);
+        return /\bfinal\b/.test(label) && !/\bsemi\b/.test(label);
+      });
+
+      return found || cupMatches[fallbackIndex] || null;
+    };
+
+    const playOff1 = findStage("po1", 0);
+    const playOff2 = findStage("po2", 1);
+    const semi1 = findStage("sf1", 2);
+    const semi2 = findStage("sf2", 3);
+    const finalMatch = findStage("final", 4);
+
+    const matchWinner = (match: Match | null): Team | null => {
+      if (
+        !match ||
+        match.status?.toLowerCase() !== "finished" ||
+        match.home_score === null ||
+        match.away_score === null ||
+        match.home_score === match.away_score
+      ) return null;
+
+      const winnerId =
+        match.home_score > match.away_score
+          ? match.home_team_id
+          : match.away_team_id;
+
+      return winnerId === null ? null : teamById.get(winnerId) || null;
+    };
+
+    const playOffWinner1 = matchWinner(playOff1);
+    const playOffWinner2 = matchWinner(playOff2);
+    const semiWinner1 = matchWinner(semi1);
+    const semiWinner2 = matchWinner(semi2);
+    const champion = matchWinner(finalMatch);
+
+    const findTeamByName = (name: string): Team | null => {
+      const normalized = name.trim().toLowerCase();
+      if (!normalized || normalized.startsWith("winner of ")) return null;
+
+      return allTeams.find(
+        (team) =>
+          team.name.trim().toLowerCase() === normalized ||
+          team.short_name.trim().toLowerCase() === normalized
+      ) || null;
+    };
+
+    const renderCupMatch = (
+      match: Match | null,
+      title: string,
+      fallbackHome: string,
+      fallbackAway: string
+    ) => {
+      const home = (
+        match?.home_team_id == null
+          ? null
+          : teamById.get(match.home_team_id) || null
+      ) || findTeamByName(fallbackHome);
+
+      const away = (
+        match?.away_team_id == null
+          ? null
+          : teamById.get(match.away_team_id) || null
+      ) || findTeamByName(fallbackAway);
+      const complete =
+        match !== null &&
+        match.status?.toLowerCase() === "finished" &&
+        match.home_score !== null &&
+        match.away_score !== null;
+      const homeWon =
+        complete && match!.home_score! > match!.away_score!;
+      const awayWon =
+        complete && match!.away_score! > match!.home_score!;
+
+      const renderCupTeam = (
+        team: Team | null,
+        fallback: string,
+        won: boolean
+      ) => (
+        <span className="flex min-w-0 items-center gap-2">
+          {team?.crest_url ? (
+            <img
+              src={team.crest_url}
+              alt={`${team.name} crest`}
+              className="h-8 w-8 shrink-0 object-contain"
+              loading="lazy"
+            />
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-500">
+              {(team?.short_name || fallback).slice(0, 2).toUpperCase()}
+            </span>
+          )}
+          <span className="min-w-0 break-words font-bold">
+            {team?.name || fallback}
+            {won ? " ✓" : ""}
+          </span>
+        </span>
+      );
+
+      return (
+        <article
+          key={match?.id ?? title}
+          className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm"
+        >
+          <p className="mb-4 text-xs font-black uppercase tracking-widest text-sky-700">
+            {title}
+          </p>
+
+          <div className={`flex items-center justify-between gap-3 ${homeWon ? "text-emerald-700" : "text-slate-900"}`}>
+            {renderCupTeam(home, fallbackHome, homeWon)}
+            <span className="shrink-0 font-black tabular-nums">
+              {complete ? match!.home_score : "–"}
+            </span>
+          </div>
+
+          <div className="my-3 border-t border-slate-100" />
+
+          <div className={`flex items-center justify-between gap-3 ${awayWon ? "text-emerald-700" : "text-slate-900"}`}>
+            {renderCupTeam(away, fallbackAway, awayWon)}
+            <span className="shrink-0 font-black tabular-nums">
+              {complete ? match!.away_score : "–"}
+            </span>
+          </div>
+
+          <p className="mt-4 text-xs font-semibold capitalize text-slate-500">
+            {match?.status || "Scheduled"}
+          </p>
+        </article>
+      );
+    };
+
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen bg-sky-50">
+          <section className="border-b border-sky-100 bg-white">
+            <div className="mx-auto max-w-7xl px-5 py-10 sm:py-14">
+              <Link
+                href={`/competitions/${encodeURIComponent(competition)}/${encodeURIComponent(season)}`}
+                className="text-xs font-black uppercase tracking-widest text-sky-600 hover:text-sky-800"
+              >
+                ← {competition} · {season}
+              </Link>
+              <p className="mt-6 text-xs font-black uppercase tracking-[0.2em] text-sky-600">
+                Knockout tournament
+              </p>
+              <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
+                {competition}
+              </h1>
+              <p className="mt-2 text-sm font-bold text-slate-500">
+                {season} · Win to advance
+              </p>
+            </div>
+          </section>
+
+          <section className="mx-auto max-w-7xl px-5 py-8 sm:py-12">
+            <div className="mb-8 rounded-2xl border border-sky-100 bg-white p-5">
+              <h2 className="text-lg font-black text-slate-900">Tournament bracket</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Play-off winners advance to the semi-finals. The semi-final winners
+                meet in the final. This competition has no league table or points ranking.
+              </p>
+            </div>
+
+            <div className="grid gap-8 lg:grid-cols-3">
+              <section>
+                <h2 className="mb-4 text-xl font-black text-slate-900">1. Play-offs</h2>
+                <div className="space-y-4">
+                  {renderCupMatch(playOff1, "Play-off 1", "Nongkseh SS CC", "Sawmer SCC")}
+                  {renderCupMatch(playOff2, "Play-off 2", "Langsning FC", "Meghalaya Police")}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="mb-4 text-xl font-black text-slate-900">2. Semi-finals</h2>
+                <div className="space-y-4">
+                  {renderCupMatch(semi1, "Semi-final 1", "Mawlai SC", playOffWinner1?.name || "Winner of Play-off 1")}
+                  {renderCupMatch(semi2, "Semi-final 2", "Shillong Lajong FC", playOffWinner2?.name || "Winner of Play-off 2")}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="mb-4 text-xl font-black text-slate-900">3. Final</h2>
+                {renderCupMatch(finalMatch, "Final", semiWinner1?.name || "Winner of Semi-final 1", semiWinner2?.name || "Winner of Semi-final 2")}
+
+                {champion && (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-800">
+                      Champions
+                    </p>
+                    <p className="mt-1 text-lg font-black text-slate-900">
+                      {champion.name}
+                    </p>
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {cupMatches.length === 0 && (
+              <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                No Super Cup fixtures were found for this season.
+              </p>
+            )}
+          </section>
+        </main>
+      </>
+    );
+  }
+
   const groups = [
     ...new Set(
       allMatches
