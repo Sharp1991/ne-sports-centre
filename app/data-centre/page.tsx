@@ -100,8 +100,47 @@ function resultForTeam(
   return "D";
 }
 
-export default async function DataCentrePage() {
-  const { data: matches, error } = await supabase
+export default async function DataCentrePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ competition?: string; season?: string }>;
+}) {
+  const params = await searchParams;
+
+  const { data: filterRows } = await supabase
+    .from("matches")
+    .select("competition, season");
+
+  const competitions = [...new Set(
+    (filterRows || [])
+      .map((row: any) => row.competition)
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+
+  const seasons = [...new Set(
+    (filterRows || [])
+      .map((row: any) => row.season)
+      .filter(Boolean)
+  )].sort((a, b) => b.localeCompare(a));
+
+  const selectedCompetition = competitions.includes(params.competition || "")
+    ? params.competition!
+    : "all";
+
+  const selectedSeason = seasons.includes(params.season || "")
+    ? params.season!
+    : "all";
+
+  const pageTitle =
+    selectedCompetition === "all" && selectedSeason === "all"
+      ? "Overall Football Statistics"
+      : selectedCompetition === "all"
+        ? `All Competitions — ${selectedSeason}`
+        : selectedSeason === "all"
+          ? `${selectedCompetition} — All Seasons`
+          : `${selectedCompetition} ${selectedSeason}`;
+
+  let matchesQuery = supabase
     .from("matches")
     .select(`
       id,
@@ -127,10 +166,18 @@ export default async function DataCentrePage() {
         crest_url
       )
     `)
-    .eq("competition", "Shillong Premier League")
-    .eq("season", "2026-27")
     .not("home_score", "is", null)
-    .not("away_score", "is", null)
+    .not("away_score", "is", null);
+
+  if (selectedCompetition !== "all") {
+    matchesQuery = matchesQuery.eq("competition", selectedCompetition);
+  }
+
+  if (selectedSeason !== "all") {
+    matchesQuery = matchesQuery.eq("season", selectedSeason);
+  }
+
+  const { data: matches, error } = await matchesQuery
     .order("date", { ascending: true });
 
   if (error) {
@@ -550,13 +597,54 @@ export default async function DataCentrePage() {
             </p>
 
             <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              Shillong Premier League 2026
+              {pageTitle}
             </h1>
 
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
               Team performance, scoring patterns and match trends
               calculated directly from recorded competition data.
             </p>
+
+            <form method="get" className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <label className="block text-xs font-bold text-slate-600">
+                Competition
+                <select
+                  name="competition"
+                  defaultValue={selectedCompetition}
+                  className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800"
+                >
+                  <option value="all">All Competitions</option>
+                  {competitions.map((competition) => (
+                    <option key={competition} value={competition}>
+                      {competition}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-xs font-bold text-slate-600">
+                Season / Year
+                <select
+                  name="season"
+                  defaultValue={selectedSeason}
+                  className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800"
+                >
+                  <option value="all">All Seasons</option>
+                  {seasons.map((season) => (
+                    <option key={season} value={season}>
+                      {season}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="submit"
+                className="rounded-xl bg-sky-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-sky-700"
+              >
+                Apply filters
+              </button>
+            </form>
           </div>
         </section>
 
@@ -609,7 +697,7 @@ export default async function DataCentrePage() {
               </h2>
               <p className="mt-2 text-sm text-slate-500">
                 Results, scoring, defensive records and goal patterns from
-                completed Shillong Premier League matches.
+                completed matches matching the selected filters.
               </p>
             </div>
 
