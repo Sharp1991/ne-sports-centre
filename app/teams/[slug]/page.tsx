@@ -37,6 +37,26 @@ type Match = {
   away_team: MatchTeam | MatchTeam[] | null;
 };
 
+type GoalEvent = {
+  player_id: number | string | null;
+  player_name_raw: string | null;
+};
+
+type PlayerRow = {
+  id: number | string;
+  name: string | null;
+  photo_url: string | null;
+  Jersey: number | string | null;
+};
+
+type TopScorer = {
+  key: string;
+  name: string;
+  goals: number;
+  photoUrl: string | null;
+  jersey: number | string | null;
+};
+
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{
@@ -196,7 +216,107 @@ export default async function TeamProfilePage({
     return seasonMatches && competitionMatches;
   });
 
+
   const completedMatches = filteredMatches.filter(isCompleted);
+
+  // Top scorers: count recorded goals in the selected completed matches.
+  // Own goals are excluded by selecting only goal/GOAL events.
+  const completedMatchIds = completedMatches.map((match) => match.id);
+  let topScorers: TopScorer[] = [];
+  let scorerLoadError = false;
+
+  if (completedMatchIds.length > 0) {
+    const { data: goalData, error: goalError } = await supabase
+      .from("match_events")
+      .select("player_id, player_name_raw")
+      .eq("team_id", team.id)
+      .in("match_id", completedMatchIds)
+      .in("type", ["goal", "GOAL"]);
+
+    if (goalError) {
+      scorerLoadError = true;
+    } else if (goalData?.length) {
+      const events = goalData as GoalEvent[];
+      const playerIds = [
+        ...new Set(
+          events
+            .map((event) => event.player_id)
+            .filter((id) => id !== null && id !== undefined)
+        ),
+      ];
+
+      let playerRows: PlayerRow[] = [];
+
+      if (playerIds.length > 0) {
+        const { data: players } = await supabase
+          .from("players")
+          .select("id, name, photo_url, Jersey")
+          .in("id", playerIds);
+
+        playerRows = (players || []) as PlayerRow[];
+      }
+
+      const playersById = new Map(
+        playerRows.map((player) => [String(player.id), player])
+      );
+
+      const normalizeName = (name: string) =>
+        name.trim().toLowerCase().replace(/\\s+/g, " ");
+
+      const playersByName = new Map(
+        playerRows
+          .filter((player) => player.name)
+          .map((player) => [normalizeName(player.name!), player])
+      );
+
+      const scorerMap = new Map<string, TopScorer>();
+
+      for (const event of events) {
+        const rawName = event.player_name_raw?.trim() || "";
+        const linkedPlayer =
+          event.player_id !== null
+            ? playersById.get(String(event.player_id))
+            : undefined;
+
+        const player =
+          linkedPlayer ||
+          (rawName ? playersByName.get(normalizeName(rawName)) : undefined);
+
+        const name = player?.name?.trim() || rawName;
+        if (!name) continue;
+
+        const key = player
+          ? `player:${player.id}`
+          : event.player_id !== null
+            ? `id:${event.player_id}`
+            : `name:${normalizeName(name)}`;
+
+        const existing = scorerMap.get(key);
+
+        if (existing) {
+          existing.goals += 1;
+        } else {
+          scorerMap.set(key, {
+            key,
+            name,
+            goals: 1,
+            photoUrl: player?.photo_url || null,
+            jersey: player?.Jersey ?? null,
+          });
+        }
+      }
+
+      const allScorers = [...scorerMap.values()];
+      const highestGoals = Math.max(
+        0,
+        ...allScorers.map((scorer) => scorer.goals)
+      );
+
+      topScorers = allScorers
+        .filter((scorer) => scorer.goals === highestGoals)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+  }
 
   const statistics = completedMatches.reduce(
     (stats, match) => {
@@ -418,6 +538,74 @@ export default async function TeamProfilePage({
             Statistics are calculated from {statistics.played} completed
             matches with recorded scores.
           </p>
+        </section>
+
+        {/* Top scorer */}
+        <section className="mt-10">
+          <div className="border-b border-[var(--border)] pb-4">
+            <h2 className="text-xl font-black text-[var(--foreground)]">
+              {topScorers.length > 1 ? "Top Scorers" : "Top Scorer"}
+            </h2>
+            <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+              Leading goal scorer{topScorers.length > 1 ? "s" : ""} for {team.name}
+            </p>
+          </div>
+
+          <div className="mt-5">
+            {scorerLoadError ? (
+              <EmptyMessage message="Unable to load top scorer statistics." />
+            ) : topScorers.length === 0 ? (
+              <EmptyMessage message="No recorded goals found for these filters." />
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {topScorers.map((scorer) => (
+                  <div
+                    key={scorer.key}
+                    className="flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
+                  >
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--background)]">
+                      {scorer.photoUrl ? (
+                        <img
+                          src={scorer.photoUrl}
+                          alt={scorer.name}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <svg
+                          viewBox="0 0 64 64"
+                          className="h-14 w-14 text-[var(--primary-dark)] opacity-60"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <circle cx="32" cy="21" r="12" />
+                          <path d="M10 57c1-13 10-21 22-21s21 8 22 21H10z" />
+                        </svg>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[var(--primary-dark)]">
+                        {topScorers.length > 1 ? "Joint top scorer" : "Top scorer"}
+                      </p>
+                      <h3 className="mt-1 break-words text-base font-black text-[var(--foreground)]">
+                        {scorer.name}
+                      </h3>
+                      {scorer.jersey !== null &&
+                        String(scorer.jersey).trim() !== "" && (
+                          <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+                            No. {scorer.jersey}
+                          </p>
+                        )}
+                      <p className="mt-2 text-sm font-bold text-[var(--primary-dark)]">
+                        {scorer.goals} {scorer.goals === 1 ? "Goal" : "Goals"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Results and fixtures */}
