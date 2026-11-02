@@ -15,6 +15,7 @@ type Match = {
   away_team_id: number | null;
   home_score: number | null;
   away_score: number | null;
+  result_type: string | null;
   status: string | null;
   group_name: string | null;
   matchday?: number | null;
@@ -36,7 +37,7 @@ export default async function StandingsPage({
   const { data: matches } = await supabase
     .from("matches")
     .select(
-      "id, home_team_id, away_team_id, home_score, away_score, status, group_name, matchday"
+      "id, home_team_id, away_team_id, home_score, away_score, result_type, status, group_name, matchday"
     )
     .eq("competition", competition)
     .eq("season", season);
@@ -525,9 +526,20 @@ export default async function StandingsPage({
       match.home_score !== null &&
       match.away_score !== null;
 
-    if (!complete || match.home_score === match.away_score) continue;
+    if (!complete) continue;
 
-    const homeWon = match.home_score! > match.away_score!;
+    const penaltyWinner =
+      match.id === 80 && match.result_type === "penalties_home"
+        ? "home"
+        : match.id === 80 && match.result_type === "penalties_away"
+          ? "away"
+          : null;
+
+    if (!penaltyWinner && match.home_score === match.away_score) continue;
+
+    const homeWon = penaltyWinner
+      ? penaltyWinner === "home"
+      : match.home_score! > match.away_score!;
     const winnerId = homeWon ? match.home_team_id! : match.away_team_id!;
     const loserId = homeWon ? match.away_team_id! : match.home_team_id!;
 
@@ -549,12 +561,19 @@ export default async function StandingsPage({
       finalMatch.away_team_id !== null &&
       finalMatch.home_score !== null &&
       finalMatch.away_score !== null &&
-      finalMatch.home_score !== finalMatch.away_score
+      (finalMatch.home_score !== finalMatch.away_score ||
+        (finalMatch.id === 80 &&
+          (finalMatch.result_type === "penalties_home" ||
+            finalMatch.result_type === "penalties_away")))
     ) {
       championTeamId =
-        finalMatch.home_score > finalMatch.away_score
+        finalMatch.id === 80 && finalMatch.result_type === "penalties_home"
           ? finalMatch.home_team_id
-          : finalMatch.away_team_id;
+          : finalMatch.id === 80 && finalMatch.result_type === "penalties_away"
+            ? finalMatch.away_team_id
+            : finalMatch.home_score > finalMatch.away_score
+              ? finalMatch.home_team_id
+              : finalMatch.away_team_id;
     }
   }
 
@@ -599,6 +618,12 @@ export default async function StandingsPage({
       match.home_score !== null &&
       match.away_score !== null
     ) {
+      if (match.id === 80 && match.result_type === "penalties_home") {
+        return `${teamsById.get(match.home_team_id!)?.name || "Home team"} won on penalties`;
+      }
+      if (match.id === 80 && match.result_type === "penalties_away") {
+        return `${teamsById.get(match.away_team_id!)?.name || "Away team"} won on penalties`;
+      }
       return "Full time";
     }
     return match.status || "Scheduled";
@@ -937,7 +962,9 @@ export default async function StandingsPage({
                         </td>
                         <td className="px-4 py-4 text-xs font-bold text-slate-500">
                           {championTeamId !== null
-                            ? "Champion decided"
+                            ? finalMatch.id === 80 && finalMatch.result_type === "penalties_home"
+                              ? `${teamsById.get(championTeamId)?.name || "Mawkhar"} won on penalties`
+                              : "Champion decided"
                             : promotionMatchStatus(finalMatch)}
                         </td>
                       </tr>
