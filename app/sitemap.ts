@@ -4,17 +4,23 @@ import { supabase } from "@/lib/supabase";
 const BASE_URL = "https://ne-sports-centre.vercel.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [{ data: articles }, { data: matches }] = await Promise.all([
-    supabase
-      .from("articles")
-      .select("slug, published_at")
-      .order("published_at", { ascending: false }),
+  const [{ data: articles }, { data: matches }, { data: teams }] =
+    await Promise.all([
+      supabase
+        .from("articles")
+        .select("slug, published_at")
+        .order("published_at", { ascending: false }),
 
-    supabase
-      .from("matches")
-      .select("id, competition, season, date")
-      .order("date", { ascending: false }),
-  ]);
+      supabase
+        .from("matches")
+        .select("id, competition, season, date")
+        .order("date", { ascending: false }),
+
+      supabase
+        .from("teams")
+        .select("id, name")
+        .order("name"),
+    ]);
 
   const urls: MetadataRoute.Sitemap = [
     {
@@ -43,6 +49,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${BASE_URL}/teams`,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/matches`,
       changeFrequency: "daily",
       priority: 0.8,
@@ -67,6 +78,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: article.published_at
         ? new Date(article.published_at)
         : undefined,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    });
+  }
+
+  for (const team of teams || []) {
+    if (!team.id || !team.name) continue;
+
+    const slug =
+      team.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "team";
+
+    urls.push({
+      url: `${BASE_URL}/teams/${slug}-${team.id}`,
       changeFrequency: "weekly",
       priority: 0.8,
     });
