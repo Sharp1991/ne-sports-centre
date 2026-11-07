@@ -4,13 +4,17 @@ import { supabase } from "@/lib/supabase";
 import { getCompetitionMatchesHref } from "@/lib/match-links";
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ competition?: string; season?: string }>;
+}) {
+  const filters = await searchParams;
   const now = new Date();
 
   const [
     { data: articles },
     { data: matches },
-    { data: standingsMatches },
   ] = await Promise.all([
     supabase
       .from("articles")
@@ -32,6 +36,9 @@ export default async function Home() {
         away_score,
         status,
         time,
+        matchday,
+        group_name,
+        result_type,
         home_team:teams!matches_home_team_id_fkey (
           id,
           name,
@@ -47,29 +54,6 @@ export default async function Home() {
       `)
       .order("date", { ascending: true }),
 
-    supabase
-      .from("matches")
-      .select(`
-        home_score,
-        away_score,
-        home_team:teams!matches_home_team_id_fkey (
-          id,
-          name,
-          short_name,
-          crest_url
-        ),
-        away_team:teams!matches_away_team_id_fkey (
-          id,
-          name,
-          short_name,
-          crest_url
-        )
-      `)
-      .eq("competition", "Shillong Premier League")
-      .eq("season", "2026-27")
-      .eq("status", "finished")
-      .not("home_score", "is", null)
-      .not("away_score", "is", null),
   ]);
 
   const featuredArticle = articles?.[0] || null;
@@ -176,7 +160,67 @@ export default async function Home() {
       scorersByMatch.set(event.match_id, list);
     });
 
-  const standings = buildStandings(standingsMatches || []);
+  const availableMatches = matches || [];
+
+  const competitions = [...new Set(
+    availableMatches.map((m: any) => m.competition)
+  )].filter(Boolean).sort();
+
+  const selectedCompetition = competitions.includes(filters.competition || "")
+    ? filters.competition!
+    : competitions.includes("Shillong Premier League")
+      ? "Shillong Premier League"
+      : competitions[0] || "";
+
+  const seasons = [...new Set(
+    availableMatches
+      .filter((m: any) => m.competition === selectedCompetition)
+      .map((m: any) => m.season)
+  )].filter(Boolean).sort();
+
+  const selectedSeason = seasons.includes(filters.season || "")
+    ? filters.season!
+    : seasons.includes("2026")
+      ? "2026"
+      : seasons[0] || "";
+
+  const selectedMatches = availableMatches.filter(
+    (m: any) =>
+      m.competition === selectedCompetition &&
+      m.season === selectedSeason &&
+      m.status === "finished" &&
+      m.home_score !== null &&
+      m.away_score !== null
+  );
+
+  const standings = buildStandings(selectedMatches);
+
+  const groupNames = [...new Set(
+    selectedMatches
+      .map((m: any) => m.group_name)
+      .filter((name: string | null) =>
+        name && /^(Group|Bottom League)/i.test(name)
+      )
+  )];
+
+  const groupStandings = groupNames.map((name) => ({
+    name,
+    standings: buildStandings(
+      selectedMatches.filter((m: any) => m.group_name === name)
+    ),
+  }));
+
+  const knockoutMatches = selectedMatches.filter((m: any) =>
+    /semi|final|quarter|play.?off|knockout/i.test(m.group_name || "") ||
+    /^(PO|SF|QF|Final)/i.test(m.matchday || "")
+  );
+
+  const displayResultMatches =
+    knockoutMatches.length > 0
+      ? knockoutMatches
+      : groupStandings.length === 0 && selectedCompetition !== "Shillong Premier League"
+        ? selectedMatches
+        : [];
 
   return (
     <>
@@ -356,120 +400,261 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* SPL 2026 STANDINGS */}
+        {/* COMPETITION STANDINGS AND RESULTS */}
         <section className="mx-auto max-w-7xl px-5 py-8">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-sky-600">
-                Shillong Premier League
-              </p>
-
-              <h2 className="mt-1 text-2xl font-black text-slate-900">
-                2026-27 Standings
-              </h2>
-            </div>
-
-            <a
-              href="/standings"
-              className="shrink-0 text-sm font-bold text-sky-600"
-            >
-              View full standings →
-            </a>
-          </div>
-
-          <div className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-white">
-            <style>{`
-              #standings-toggle { position: absolute; opacity: 0; pointer-events: none; }
-              #standings-toggle:not(:checked) ~ .standings-table tbody tr:nth-child(n+6) { display: none; }
-              #standings-toggle:checked ~ .standings-toggle-label .show-all { display: none; }
-              #standings-toggle:not(:checked) ~ .standings-toggle-label .show-less { display: none; }
-            `}</style>
-
-            <input id="standings-toggle" type="checkbox" />
-
-            <div className="overflow-x-auto standings-table">
-              <table className="w-full min-w-[560px]">
-                <thead className="bg-sky-50">
-                  <tr className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    <th className="px-4 py-3 text-left">#</th>
-                    <th className="px-4 py-3 text-left">Team</th>
-                    <th className="px-3 py-3 text-center">P</th>
-                    <th className="px-3 py-3 text-center">W</th>
-                    <th className="px-3 py-3 text-center">D</th>
-                    <th className="px-3 py-3 text-center">L</th>
-                    <th className="px-3 py-3 text-center">GD</th>
-                    <th className="px-4 py-3 text-center">Pts</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {standings.map((team, index) => (
-                    <tr key={team.id} className="transition hover:bg-sky-50/50">
-                      <td className="px-4 py-4 text-sm font-black text-slate-400">
-                        {index + 1}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          {team.crest_url ? (
-                            <Image
-                                src={team.crest_url}
-                                alt=""
-                                width={32}
-                                height={32}
-                                sizes="32px"
-                                className="h-8 w-8 object-contain"
-                              />
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-slate-100" />
-                          )}
-
-                          <span className="text-sm font-bold text-slate-800">
-                            {team.name}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.p}</td>
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.w}</td>
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.d}</td>
-                      <td className="px-3 py-4 text-center text-sm text-slate-600">{team.l}</td>
-
-                      <td className={`px-3 py-4 text-center text-sm font-bold ${
-                        team.gd > 0
-                          ? "text-emerald-600"
-                          : team.gd < 0
-                            ? "text-red-500"
-                            : "text-slate-500"
-                      }`}>
-                        {team.gd > 0 ? `+${team.gd}` : team.gd}
-                      </td>
-
-                      <td className="px-4 py-4 text-center text-sm font-black text-slate-900">
-                        {team.pts}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {standings.length > 5 && (
-              <label
-                htmlFor="standings-toggle"
-                className="standings-toggle-label block cursor-pointer border-t border-sky-100 px-4 py-3 text-center text-sm font-bold text-sky-600 hover:bg-sky-50"
-              >
-                <span className="show-all">Show all teams ↓</span>
-                <span className="show-less">Show less ↑</span>
-              </label>
-            )}
-
-            {standings.length === 0 && (
-              <div className="p-8 text-center text-sm text-slate-400">
-                No finished Shillong Premier League matches available.
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-sky-600">
+                  {selectedCompetition}
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-slate-900">
+                  {selectedCompetition === "Shillong Premier League"
+                    ? `${selectedSeason} Standings`
+                    : groupStandings.length > 0
+                      ? `${selectedSeason} Standings & Results`
+                      : `${selectedSeason} Results`}
+                </h2>
               </div>
-            )}
+
+              {selectedCompetition === "Shillong Premier League" && (
+                <a
+                  href="/standings"
+                  className="shrink-0 text-sm font-bold text-sky-600"
+                >
+                  View full standings →
+                </a>
+              )}
+            </div>
+
+            <form
+              method="GET"
+              action="/"
+              className="flex flex-wrap items-end gap-3 rounded-2xl border border-sky-100 bg-white p-4"
+            >
+              <div className="min-w-[200px] flex-1">
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Competition
+                </label>
+                <select
+                  name="competition"
+                  defaultValue={selectedCompetition}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800"
+                >
+                  {competitions.map((competition: string) => (
+                    <option key={competition} value={competition}>
+                      {competition}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="min-w-[130px]">
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Season
+                </label>
+                <select
+                  name="season"
+                  defaultValue={selectedSeason}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800"
+                >
+                  {seasons.map((season: string) => (
+                    <option key={season} value={season}>
+                      {season}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-sky-700"
+              >
+                Apply filters
+              </button>
+            </form>
           </div>
+
+          {selectedCompetition === "Shillong Premier League" && (
+            <div className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-white">
+              <style>{`
+                #standings-toggle { position: absolute; opacity: 0; pointer-events: none; }
+                #standings-toggle:not(:checked) ~ .standings-table tbody tr:nth-child(n+6) { display: none; }
+                #standings-toggle:checked ~ .standings-toggle-label .show-all { display: none; }
+                #standings-toggle:not(:checked) ~ .standings-toggle-label .show-less { display: none; }
+              `}</style>
+              <input id="standings-toggle" type="checkbox" />
+
+              <div className="overflow-x-auto standings-table">
+                <table className="w-full min-w-[560px]">
+                  <thead className="bg-sky-50">
+                    <tr className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      <th className="px-4 py-3 text-left">#</th>
+                      <th className="px-4 py-3 text-left">Team</th>
+                      <th className="px-3 py-3 text-center">P</th>
+                      <th className="px-3 py-3 text-center">W</th>
+                      <th className="px-3 py-3 text-center">D</th>
+                      <th className="px-3 py-3 text-center">L</th>
+                      <th className="px-3 py-3 text-center">GD</th>
+                      <th className="px-4 py-3 text-center">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {standings.map((team, index) => (
+                      <tr key={team.id} className="transition hover:bg-sky-50/50">
+                        <td className="px-4 py-4 text-sm font-black text-slate-400">{index + 1}</td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            {team.crest_url ? (
+                              <Image src={team.crest_url} alt="" width={32} height={32} sizes="32px" className="h-8 w-8 object-contain" />
+                            ) : (
+                              <div className="h-8 w-8 rounded-full bg-slate-100" />
+                            )}
+                            <span className="text-sm font-bold text-slate-800">{team.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.p}</td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.w}</td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.d}</td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.l}</td>
+                        <td className={`px-3 py-4 text-center text-sm font-bold ${
+                          team.gd > 0 ? "text-emerald-600" : team.gd < 0 ? "text-red-500" : "text-slate-500"
+                        }`}>
+                          {team.gd > 0 ? `+${team.gd}` : team.gd}
+                        </td>
+                        <td className="px-4 py-4 text-center text-sm font-black text-slate-900">{team.pts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {standings.length > 5 && (
+                <label
+                  htmlFor="standings-toggle"
+                  className="standings-toggle-label block cursor-pointer border-t border-sky-100 px-4 py-3 text-center text-sm font-bold text-sky-600 hover:bg-sky-50"
+                >
+                  <span className="show-all">Show all teams ↓</span>
+                  <span className="show-less">Show less ↑</span>
+                </label>
+              )}
+
+              {standings.length === 0 && (
+                <div className="p-8 text-center text-sm text-slate-400">
+                  No finished matches available for this competition and season.
+                </div>
+              )}
+            </div>
+          )}
+
+          {groupStandings.map((group) => (
+            <div key={group.name} className="mt-5 overflow-hidden rounded-2xl border border-sky-100 bg-white">
+              <div className="border-b border-sky-100 bg-sky-50 px-4 py-3">
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-700">
+                  {group.name}
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px]">
+                  <thead className="bg-white">
+                    <tr className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      <th className="px-4 py-3 text-left">#</th>
+                      <th className="px-4 py-3 text-left">Team</th>
+                      <th className="px-3 py-3 text-center">P</th>
+                      <th className="px-3 py-3 text-center">W</th>
+                      <th className="px-3 py-3 text-center">D</th>
+                      <th className="px-3 py-3 text-center">L</th>
+                      <th className="px-3 py-3 text-center">GD</th>
+                      <th className="px-4 py-3 text-center">Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {group.standings.map((team: any, index: number) => (
+                      <tr key={team.id} className="transition hover:bg-sky-50/50">
+                        <td className="px-4 py-4 text-sm font-black text-slate-400">{index + 1}</td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            {team.crest_url ? (
+                              <Image src={team.crest_url} alt="" width={32} height={32} sizes="32px" className="h-8 w-8 object-contain" />
+                            ) : (
+                              <div className="h-8 w-8 rounded-full bg-slate-100" />
+                            )}
+                            <span className="text-sm font-bold text-slate-800">{team.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.p}</td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.w}</td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.d}</td>
+                        <td className="px-3 py-4 text-center text-sm text-slate-600">{team.l}</td>
+                        <td className={`px-3 py-4 text-center text-sm font-bold ${
+                          team.gd > 0 ? "text-emerald-600" : team.gd < 0 ? "text-red-500" : "text-slate-500"
+                        }`}>
+                          {team.gd > 0 ? `+${team.gd}` : team.gd}
+                        </td>
+                        <td className="px-4 py-4 text-center text-sm font-black text-slate-900">{team.pts}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          {displayResultMatches.length > 0 && (
+            <div className="mt-6">
+              <h3 className="mb-3 text-sm font-black uppercase tracking-wider text-slate-500">
+                {groupStandings.length > 0 ? "Knockout Results" : "Match Results"}
+              </h3>
+              <div className="space-y-3">
+                {displayResultMatches.map((match: any) => {
+                  const penaltyWinner =
+                    match.result_type === "penalties_home"
+                      ? match.home_team
+                      : match.result_type === "penalties_away"
+                        ? match.away_team
+                        : null;
+
+                  return (
+                    <div key={match.id} className="rounded-xl border border-sky-100 bg-white p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wide text-sky-600">
+                          {match.group_name || match.matchday || "Match"}
+                        </span>
+                        <span className="text-xs text-slate-400">{match.date}</span>
+                      </div>
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                        <span className="text-sm font-bold text-slate-800">
+                          {match.home_team?.name || "Home"}
+                        </span>
+                        <span className="whitespace-nowrap text-lg font-black text-slate-900">
+                          {match.home_score} - {match.away_score}
+                        </span>
+                        <span className="text-right text-sm font-bold text-slate-800">
+                          {match.away_team?.name || "Away"}
+                        </span>
+                      </div>
+                      {penaltyWinner && (
+                        <p className="mt-2 text-xs font-semibold text-emerald-600">
+                          Won on penalties: {penaltyWinner.name}
+                        </p>
+                      )}
+                      {match.result_type === "forfeit_away" && (
+                        <p className="mt-2 text-xs font-semibold text-slate-500">
+                          Forfeit result
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {selectedMatches.length === 0 && (
+            <div className="mt-5 rounded-2xl border border-sky-100 bg-white p-8 text-center text-sm text-slate-400">
+              No completed matches available for this competition and season.
+            </div>
+          )}
         </section>
 
         {/* DATA CENTRE */}
