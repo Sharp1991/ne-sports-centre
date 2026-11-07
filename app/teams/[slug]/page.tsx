@@ -58,11 +58,30 @@ type TopScorer = {
   jersey: number | string | null;
 };
 
+type CompetitionEdition = {
+  id: number;
+  competition: string;
+  season: string;
+  status: string;
+  champion_team_id: number | null;
+  runner_up_team_id: number | null;
+};
+
+type CompetitionMovement = {
+  id: number;
+  competition_edition_id: number;
+  team_id: number;
+  movement_type: string;
+  destination_edition_id: number | null;
+  notes: string | null;
+};
+
 type PageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{
     season?: string | string[];
     competition?: string | string[];
+    historySeason?: string | string[];
   }>;
 };
 
@@ -178,6 +197,135 @@ export default async function TeamProfilePage({
     .order("date", { ascending: false });
 
   const matches = (matchData || []) as Match[];
+
+  // Club history records are loaded independently of the statistics filters.
+  const [
+    { data: editionData, error: editionError },
+    { data: movementData, error: movementError },
+  ] = await Promise.all([
+    supabase
+      .from("competition_editions")
+      .select("id, competition, season, status, champion_team_id, runner_up_team_id"),
+    supabase
+      .from("competition_edition_movements")
+      .select("id, competition_edition_id, team_id, movement_type, destination_edition_id, notes")
+      .eq("team_id", team.id),
+  ]);
+
+  const editions = (editionData || []) as CompetitionEdition[];
+  const movements = (movementData || []) as CompetitionMovement[];
+  const editionsById = new Map(editions.map((edition) => [edition.id, edition]));
+
+  const historySeasons = [...new Set([
+    ...matches.map((match) => match.season),
+    ...editions
+      .filter((edition) =>
+        edition.champion_team_id === team.id ||
+        edition.runner_up_team_id === team.id
+      )
+      .map((edition) => edition.season),
+    ...movements.map((movement) =>
+      editionsById.get(movement.competition_edition_id)?.season
+    ),
+  ].filter((season): season is string => Boolean(season)))].sort(
+    (a, b) => b.localeCompare(a, undefined, { numeric: true })
+  );
+
+  const requestedHistorySeason =
+    typeof filters.historySeason === "string"
+      ? filters.historySeason
+      : "all";
+
+  const selectedHistorySeason = historySeasons.includes(requestedHistorySeason)
+    ? requestedHistorySeason
+    : "all";
+
+  const honours = editions
+    .filter((edition) =>
+      edition.status === "completed" &&
+      (edition.champion_team_id === team.id ||
+        edition.runner_up_team_id === team.id)
+    )
+    .sort((a, b) =>
+      b.season.localeCompare(a.season, undefined, { numeric: true }) ||
+      a.competition.localeCompare(b.competition)
+    );
+
+  const filteredHonours = honours.filter((edition) =>
+    selectedHistorySeason === "all" ||
+    edition.season === selectedHistorySeason
+  );
+
+  const competitionHistoryMap = new Map<
+    string,
+    { competition: string; season: string; matchCount: number }
+  >();
+
+  for (const match of matches) {
+    if (!match.competition || !match.season) continue;
+
+    const key = `${match.competition}::${match.season}`;
+    const existing = competitionHistoryMap.get(key);
+
+    if (existing) {
+      existing.matchCount += 1;
+    } else {
+      competitionHistoryMap.set(key, {
+        competition: match.competition,
+        season: match.season,
+        matchCount: 1,
+      });
+    }
+  }
+
+  const competitionHistory = [...competitionHistoryMap.values()].sort(
+    (a, b) =>
+      b.season.localeCompare(a.season, undefined, { numeric: true }) ||
+      a.competition.localeCompare(b.competition)
+  );
+
+  const filteredCompetitionHistory = competitionHistory.filter((item) =>
+    selectedHistorySeason === "all" ||
+    item.season === selectedHistorySeason
+  );
+
+  const teamMovements = movements
+    .map((movement) => ({
+      ...movement,
+      sourceEdition: editionsById.get(movement.competition_edition_id),
+      destinationEdition: movement.destination_edition_id
+        ? editionsById.get(movement.destination_edition_id)
+        : undefined,
+    }))
+    .filter((movement) => Boolean(movement.sourceEdition))
+    .sort((a, b) =>
+      (b.sourceEdition?.season || "").localeCompare(
+        a.sourceEdition?.season || "",
+        undefined,
+        { numeric: true }
+      )
+    );
+
+  const filteredTeamMovements = teamMovements.filter((movement) =>
+    selectedHistorySeason === "all" ||
+    movement.sourceEdition?.season === selectedHistorySeason
+  );
+
+  const championshipCount = honours.filter(
+    (edition) => edition.champion_team_id === team.id
+  ).length;
+
+  const runnerUpCount = honours.filter(
+    (edition) => edition.runner_up_team_id === team.id
+  ).length;
+
+  const promotionCount = teamMovements.filter(
+    (movement) => movement.movement_type === "promoted"
+  ).length;
+
+  const relegationCount = teamMovements.filter(
+    (movement) => movement.movement_type === "relegated"
+  ).length;
 
   const seasons = [...new Set(
     matches.map((match) => match.season).filter(
@@ -462,6 +610,11 @@ export default async function TeamProfilePage({
             method="GET"
             className="mt-5 flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:flex-row sm:items-end"
           >
+            <input
+              type="hidden"
+              name="historySeason"
+              value={selectedHistorySeason}
+            />
             <div className="flex-1">
               <label
                 htmlFor="season"
@@ -684,6 +837,212 @@ export default async function TeamProfilePage({
             </div>
           </section>
         </div>
+
+        {/* Club history */}
+        <section className="mt-12">
+          <div className="border-b border-[var(--border)] pb-4">
+            <h2 className="text-2xl font-black text-[var(--foreground)]">
+              Club History
+            </h2>
+            <p className="mt-2 text-sm text-[var(--foreground)] opacity-60">
+              Honours, competitions played, promotions and relegations.
+            </p>
+          </div>
+
+          <form
+            action={`/teams/${slug}`}
+            method="GET"
+            className="mt-5 flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:flex-row sm:items-end"
+          >
+            <input type="hidden" name="season" value={selectedSeason} />
+            <input
+              type="hidden"
+              name="competition"
+              value={selectedCompetition}
+            />
+
+            <div className="flex-1">
+              <label
+                htmlFor="historySeason"
+                className="mb-2 block text-xs font-bold uppercase tracking-wider text-[var(--foreground)] opacity-70"
+              >
+                History Year
+              </label>
+              <select
+                id="historySeason"
+                name="historySeason"
+                defaultValue={selectedHistorySeason}
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
+              >
+                <option value="all">All Seasons</option>
+                {historySeasons.map((season) => (
+                  <option key={season} value={season}>
+                    {season}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
+              className="rounded-xl bg-[var(--primary-dark)] px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+            >
+              Apply Year
+            </button>
+          </form>
+
+          {/* Overall history totals remain visible for every year selection. */}
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: "Championships", value: championshipCount },
+              { label: "Runner-up Finishes", value: runnerUpCount },
+              { label: "Promotions", value: promotionCount },
+              { label: "Relegations", value: relegationCount },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
+              >
+                <p className="text-xs font-bold text-[var(--foreground)] opacity-60">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-2xl font-black text-[var(--foreground)]">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Honours */}
+          <div className="mt-10">
+            <h3 className="text-xl font-black text-[var(--foreground)]">
+              Honours
+            </h3>
+            <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+              Confirmed championships and runner-up finishes.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {editionError ? (
+                <EmptyMessage message="Unable to load club honours." />
+              ) : filteredHonours.length === 0 ? (
+                <EmptyMessage message="No honours recorded for this year." />
+              ) : (
+                filteredHonours.map((edition) => {
+                  const isChampion = edition.champion_team_id === team.id;
+
+                  return (
+                    <div
+                      key={edition.id}
+                      className="flex flex-col justify-between gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center"
+                    >
+                      <div>
+                        <p className="font-bold text-[var(--foreground)]">
+                          {edition.competition}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+                          {edition.season}
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold text-[var(--primary-dark)]">
+                        {isChampion ? "Champions" : "Runner-up"}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Competitions played */}
+          <div className="mt-10">
+            <h3 className="text-xl font-black text-[var(--foreground)]">
+              Competitions Played
+            </h3>
+            <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+              Competition participation based on the club's recorded matches.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {matchError ? (
+                <EmptyMessage message="Unable to load competition history." />
+              ) : filteredCompetitionHistory.length === 0 ? (
+                <EmptyMessage message="No competition participation recorded for this year." />
+              ) : (
+                filteredCompetitionHistory.map((item) => (
+                  <div
+                    key={`${item.competition}-${item.season}`}
+                    className="flex flex-col justify-between gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center"
+                  >
+                    <div>
+                      <p className="font-bold text-[var(--foreground)]">
+                        {item.competition}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+                        {item.season}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-[var(--primary-dark)]">
+                      {item.matchCount} recorded{" "}
+                      {item.matchCount === 1 ? "match" : "matches"}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Promotions and relegations */}
+          <div className="mt-10">
+            <h3 className="text-xl font-black text-[var(--foreground)]">
+              Promotions and Relegations
+            </h3>
+            <p className="mt-1 text-xs text-[var(--foreground)] opacity-60">
+              Recorded division movements, shown against the source season.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {movementError || editionError ? (
+                <EmptyMessage message="Unable to load promotion and relegation records." />
+              ) : filteredTeamMovements.length === 0 ? (
+                <EmptyMessage message="No promotion or relegation recorded for this year." />
+              ) : (
+                filteredTeamMovements.map((movement) => (
+                  <div
+                    key={movement.id}
+                    className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4"
+                  >
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                      <p className="font-bold text-[var(--foreground)]">
+                        {movement.movement_type === "promoted"
+                          ? "Promoted"
+                          : movement.movement_type === "relegated"
+                            ? "Relegated"
+                            : movement.movement_type}
+                      </p>
+                      <span className="text-xs text-[var(--foreground)] opacity-60">
+                        {movement.sourceEdition?.season}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm text-[var(--foreground)] opacity-70">
+                      {movement.sourceEdition?.competition}
+                      {movement.destinationEdition
+                        ? ` → ${movement.destinationEdition.competition} ${movement.destinationEdition.season}`
+                        : ""}
+                    </p>
+
+                    {movement.notes && (
+                      <p className="mt-2 text-xs text-[var(--foreground)] opacity-60">
+                        {movement.notes}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
       </main>
     </>
   );
